@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Laboratorio virtual académico para estudiar el movimiento parabólico ideal.">
+  <title>Laboratorio Virtual de Movimiento Parabólico | Física I</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#simulador">Ir al simulador</a>
+
+  <header class="site-header">
+    <nav class="topnav" aria-label="Navegación principal">
+      <a class="brand" href="#inicio" aria-label="ProyectilLab, inicio">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>Proyectil<span class="brand-accent">Lab</span></span>
+      </a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="navLinks">Menú</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#inicio">Inicio</a>
+        <a href="#simulador">Simulador</a>
+        <a href="#acerca">Acerca</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-copy">
+        <p class="eyebrow">Física I · Cinemática en dos dimensiones</p>
+        <h1>Laboratorio Virtual de <span>Movimiento Parabólico</span></h1>
+        <p class="hero-lead">Modifica las condiciones iniciales y observa, en un plano cartesiano a escala, cómo evoluciona la trayectoria de un proyectil.</p>
+        <a class="btn btn-primary" href="#simulador">Comenzar práctica</a>
+      </div>
+      <aside class="academic-card" aria-label="Identidad académica">
+        <img src="complementos/UNICAH.png" alt="Universidad Católica de Honduras">
+        <div>
+          <p class="academic-kicker">Proyecto académico</p>
+          <h2>Universidad Católica de Honduras</h2>
+          <p>Campus Jesús Sacramentado · Física I</p>
+          <span>Ingeniería en Ciencias de la Computación</span>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section simulator-section" id="simulador">
+      <div class="section-heading">
+        <div><p class="eyebrow">Práctica interactiva</p><h2>Simulador</h2></div>
+        <p class="model-note"><strong>Modelo ideal:</strong> gravedad constante y sin resistencia del aire.</p>
+      </div>
+
+      <div class="sim-layout">
+        <form class="card controls" id="controlsForm" novalidate>
+          <div class="card-heading">
+            <span class="step-number">01</span>
+            <div><h3>Condiciones iniciales</h3><p>Configura el lanzamiento.</p></div>
+          </div>
+
+          <fieldset>
+            <legend>Velocidad</legend>
+            <label for="inputType">Modo de entrada</label>
+            <select id="inputType">
+              <option value="polar">Magnitud y ángulo</option>
+              <option value="components">Componentes x, y</option>
+            </select>
+            <div class="input-grid" id="polarInputs">
+              <label>Rapidez <span>m/s</span><input type="number" id="v0" value="25" min="0" step="any" inputmode="decimal"></label>
+              <label>Ángulo θ <span>°</span><input type="number" id="angle" value="45" min="-90" max="90" step="any" inputmode="decimal"></label>
+            </div>
+            <div class="input-grid hidden" id="componentInputs">
+              <label>v<sub>x0</sub> <span>m/s</span><input type="number" id="vx0" value="17.68" step="any" inputmode="decimal"></label>
+              <label>v<sub>y0</sub> <span>m/s</span><input type="number" id="vy0" value="17.68" step="any" inputmode="decimal"></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Entorno</legend>
+            <div class="input-grid">
+              <label>Altura y<sub>0</sub> <span>m</span><input type="number" id="y0" value="0" min="0" step="any" inputmode="decimal"></label>
+              <label>Masa <span>kg</span><input type="number" id="mass" value="1" min="0.001" step="any" inputmode="decimal"></label>
+            </div>
+            <label for="gravityPreset">Gravedad</label>
+            <select id="gravityPreset">
+              <option value="9.81">Tierra · 9.81 m/s²</option>
+              <option value="1.62">Luna · 1.62 m/s²</option>
+              <option value="custom">Personalizada</option>
+            </select>
+            <label class="hidden" id="customGravityGroup">Gravedad personalizada <span>m/s²</span><input type="number" id="gravityCustom" value="9.81" min="0.001" step="any" inputmode="decimal"></label>
+          </fieldset>
+
+          <label class="check-control"><input type="checkbox" id="showVectors" checked> Mostrar vectores físicos</label>
+          <p class="error-msg hidden" id="errorMsg" role="alert"></p>
+
+          <div class="button-grid">
+            <button class="btn btn-primary" id="btnLanzar" type="submit">Lanzar</button>
+            <button class="btn btn-secondary" id="btnPausar" type="button" disabled>Pausar</button>
+            <button class="btn btn-ghost" id="btnReiniciar" type="button">Reiniciar</button>
+            <button class="btn btn-ghost" id="btnLimpiar" type="button">Limpiar</button>
+          </div>
+        </form>
+
+        <div class="card canvas-card">
+          <div class="canvas-heading">
+            <div><span class="step-number">02</span><h3>Plano cartesiano</h3></div>
+            <span class="status-badge" id="statusBadge" role="status">En espera</span>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="simCanvas" aria-label="Plano cartesiano animado de la trayectoria del proyectil"></canvas>
+            <aside class="canvas-data" aria-label="Resultados principales de la trayectoria">
+              <div><span id="overlayRLabel">Rmax</span><strong id="overlayR">— m</strong></div>
+              <div><span>Hmax</span><strong id="overlayH">— m</strong></div>
+              <div><span>Dmax</span><strong id="overlayD">— m</strong></div>
+              <div><span>Tiempo total</span><strong id="overlayT">— s</strong></div>
+              <div class="equation-row"><span>Trayectoria</span><code id="overlayEquation">Sin calcular</code></div>
+            </aside>
+          </div>
+          <p class="canvas-legend">
+            <span><i class="legend-reference"></i>Trayectoria prevista</span>
+            <span><i class="legend-trail"></i>Recorrido actual</span>
+            <span><i class="legend-apex"></i>Altura máxima</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="compact-data">
+        <section class="card telemetry-card" aria-labelledby="telemetryTitle">
+          <div class="mini-heading"><h3 id="telemetryTitle">Telemetría</h3><p>Valores instantáneos</p></div>
+          <div class="metric-grid telemetry-grid" aria-live="polite">
+            <div><span>t</span><strong id="teleT">0.00</strong><small>s</small></div>
+            <div><span>x</span><strong id="teleX">0.00</strong><small>m</small></div>
+            <div><span>y</span><strong id="teleY">0.00</strong><small>m</small></div>
+            <div><span>v<sub>x</sub></span><strong id="teleVx">0.00</strong><small>m/s</small></div>
+            <div><span>v<sub>y</sub></span><strong id="teleVy">0.00</strong><small>m/s</small></div>
+            <div><span>|v|</span><strong id="teleSpeed">0.00</strong><small>m/s</small></div>
+          </div>
+        </section>
+
+        <section class="card results-card" aria-labelledby="resultsTitle">
+          <div class="mini-heading"><h3 id="resultsTitle">Resumen</h3><p>Resultados del lanzamiento</p></div>
+          <div class="metric-grid results-grid">
+            <div><span>Rapidez inicial</span><strong id="resV0">—</strong><small>m/s</small></div>
+            <div><span>Rapidez de impacto</span><strong id="resVf">—</strong><small>m/s</small></div>
+            <div><span>Ángulo de impacto</span><strong id="resImpactAngle">—</strong><small>°</small></div>
+            <div><span>Tiempo de vuelo</span><strong id="resTiempo">—</strong><small>s</small></div>
+            <div><span>Energía mecánica</span><strong id="resE">—</strong><small>J</small></div>
+            <div><span>Momento inicial</span><strong id="resMomentum">—</strong><small>kg·m/s</small></div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="section about-section" id="acerca">
+      <div class="section-heading">
+        <div><h2>Acerca del laboratorio</h2></div>
+      </div>
+      <div class="about-grid">
+        <article class="card about-copy">
+          <h3>Objetivo</h3>
+          <p>Relacionar las ecuaciones del movimiento parabólico con una representación visual a escala, facilitando la experimentación durante la clase de Física I.</p>
+          <h3>Cómo usarlo</h3>
+          <p>Selecciona el modo de entrada, configura velocidad, altura, masa y gravedad, y presiona <strong>Lanzar</strong>. Puedes pausar la animación, reiniciarla y activar u ocultar los vectores.</p>
+        </article>
+        <aside class="card project-data">
+          <h3>Ficha académica</h3>
+          <dl>
+            <div><dt>Universidad</dt><dd>Universidad Católica de Honduras, UNICAH</dd></div>
+            <div><dt>Campus</dt><dd>Jesús Sacramentado</dd></div>
+            <div><dt>Carrera</dt><dd>Ingeniería en Ciencias de la Computación</dd></div>
+            <div><dt>Grupo</dt><dd>GRUPO E</dd></div>
+            <div><dt>Integrantes</dt><dd>FRANKLIN ZUNIGA<br>ANGEL JIMENEZ<br>JOSEP MERCADO</dd><dd>MOISES GÓMEZ<br><dd>JULIO RAMOS<br><dd>KHATERIN SANCHEZ<br></div>
+            <div><dt>Docente</dt><dd>LEONARDO MEJÍA</dd></div>
+            <div><dt>Período</dt><dd>SEGUNDO PERIODO 2026</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><strong>ProyectilLab</strong>
+    <p>UNICAH · Campus Jesús Sacramentado · Física I</p>
+  </footer>
+</body>
+</html>
