@@ -54,7 +54,10 @@ const dom = {
 };
 
 ["T", "X", "Y", "Vx", "Vy", "Speed"].forEach(key => dom[`tele${key}`] = $(`tele${key}`));
-["V0", "Vf", "ImpactAngle", "Tiempo", "E", "Momentum"].forEach(key => dom[`res${key}`] = $(`res${key}`));
+[
+  "V0", "LaunchAngle", "Y0", "Mass", "Gravity", "FlightTime", "AscentTime",
+  "Range", "MaxHeight", "Vertex", "Vx0", "Vy0", "ImpactSpeed", "ImpactAngle"
+].forEach(key => dom[`res${key}`] = $(`res${key}`));
 
 const ctx = dom.canvas.getContext("2d");
 const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -79,6 +82,9 @@ function readInputs() {
   const y0 = Number(dom.y0.value);
   const mass = Number(dom.mass.value);
   const g = Number(dom.gravityPreset.value === "custom" ? dom.gravityCustom.value : dom.gravityPreset.value);
+  const gravityName = dom.gravityPreset.value === "custom"
+    ? "Personalizada"
+    : dom.gravityPreset.selectedOptions[0].textContent.split("·")[0].trim();
 
   if (!finite(y0) || y0 < 0) return { error: "La altura inicial debe ser mayor o igual que cero." };
   if (!finite(mass) || mass <= 0) return { error: "La masa debe ser mayor que cero." };
@@ -106,7 +112,7 @@ function readInputs() {
   }
 
   if (speed0 === 0 && y0 === 0) return { error: "Con altura y velocidad inicial iguales a cero, el impacto es inmediato." };
-  return { data: { inputMode, y0, mass, g, vx0, vy0, speed0, angleDeg } };
+  return { data: { inputMode, y0, mass, g, gravityName, vx0, vy0, speed0, angleDeg } };
 }
 
 /* Modelo físico */
@@ -190,12 +196,21 @@ function renderResults(p) {
   dom.overlayT.textContent = `${fmt(p.flightTime)} s`;
   dom.overlayEquation.textContent = trajectoryEquation(p);
 
+  const vertexX = p.vx0 * p.ascentTime;
   dom.resV0.textContent = fmt(p.speed0);
-  dom.resVf.textContent = fmt(p.impactSpeed);
+  dom.resLaunchAngle.textContent = fmt(p.angleDeg);
+  dom.resY0.textContent = fmt(p.y0);
+  dom.resMass.textContent = fmt(p.mass);
+  dom.resGravity.textContent = `${p.gravityName} · ${fmt(p.g)} m/s²`;
+  dom.resFlightTime.textContent = fmt(p.flightTime);
+  dom.resAscentTime.textContent = fmt(p.ascentTime);
+  dom.resRange.textContent = fmt(p.displacement);
+  dom.resMaxHeight.textContent = fmt(p.maxHeight);
+  dom.resVertex.textContent = `(${fmt(vertexX)}, ${fmt(p.maxHeight)})`;
+  dom.resVx0.textContent = fmt(p.vx0);
+  dom.resVy0.textContent = fmt(p.vy0);
+  dom.resImpactSpeed.textContent = fmt(p.impactSpeed);
   dom.resImpactAngle.textContent = fmt(p.impactAngle);
-  dom.resTiempo.textContent = fmt(p.flightTime);
-  dom.resE.textContent = fmt(p.mechanical);
-  dom.resMomentum.textContent = fmt(p.momentum);
 }
 
 function updateTelemetry(point) {
@@ -655,7 +670,10 @@ function clearAll() {
   updateGravityVisibility();
   hideError();
 
-  ["V0", "Vf", "ImpactAngle", "Tiempo", "E", "Momentum"].forEach(key => {
+  [
+    "V0", "LaunchAngle", "Y0", "Mass", "Gravity", "FlightTime", "AscentTime",
+    "Range", "MaxHeight", "Vertex", "Vx0", "Vy0", "ImpactSpeed", "ImpactAngle"
+  ].forEach(key => {
     dom[`res${key}`].textContent = "—";
   });
   updateTelemetry({ t: 0, x: 0, y: 0, vx: 0, vy: 0 });

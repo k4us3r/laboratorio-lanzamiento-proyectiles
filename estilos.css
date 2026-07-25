@@ -102,11 +102,13 @@ input:hover, select:hover { border-color: #aebbb3; }
 .legend-trail { border-color: var(--green-2) !important; }
 .legend-apex { border-color: var(--gold) !important; }
 
-.compact-data { margin-top: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.compact-data { margin-top: 16px; display: grid; grid-template-columns: 1fr; gap: 16px; }
 .telemetry-card, .results-card { min-width: 0; padding: 17px; }
 .mini-heading { margin-bottom: 11px; display: flex; align-items: baseline; justify-content: space-between; gap: 14px; }
 .mini-heading h3 { margin: 0; font-size: .96rem; }
 .mini-heading p { margin: 0; color: var(--muted); font-size: .72rem; }
+.summary-heading { margin: 16px 0 8px; color: var(--green); font: 600 .72rem var(--mono); text-transform: uppercase; letter-spacing: .07em; }
+.summary-heading:first-of-type { margin-top: 0; }
 .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--line); }
 .metric-grid div { min-width: 0; padding: 10px; background: var(--surface); }
 .metric-grid span { min-height: 1.3em; display: block; overflow-wrap: anywhere; color: var(--muted); font-size: .66rem; }

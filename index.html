@@ -140,14 +140,28 @@
         </section>
 
         <section class="card results-card" aria-labelledby="resultsTitle">
-          <div class="mini-heading"><h3 id="resultsTitle">Resumen</h3><p>Resultados del lanzamiento</p></div>
+          <div class="mini-heading"><h3 id="resultsTitle">Resumen de la simulación</h3><p>Datos del lanzamiento</p></div>
+
+          <h4 class="summary-heading">Parámetros de entrada</h4>
+          <div class="metric-grid results-grid summary-inputs">
+            <div><span>Rapidez inicial (v<sub>0</sub>)</span><strong id="resV0">—</strong><small>m/s</small></div>
+            <div><span>Ángulo de lanzamiento (θ)</span><strong id="resLaunchAngle">—</strong><small>°</small></div>
+            <div><span>Altura inicial (y<sub>0</sub>)</span><strong id="resY0">—</strong><small>m</small></div>
+            <div><span>Masa</span><strong id="resMass">—</strong><small>kg</small></div>
+            <div><span>Gravedad seleccionada</span><strong id="resGravity">—</strong></div>
+          </div>
+
+          <h4 class="summary-heading">Resultados principales</h4>
           <div class="metric-grid results-grid">
-            <div><span>Rapidez inicial</span><strong id="resV0">—</strong><small>m/s</small></div>
-            <div><span>Rapidez de impacto</span><strong id="resVf">—</strong><small>m/s</small></div>
+            <div><span>Tiempo total de vuelo (t)</span><strong id="resFlightTime">—</strong><small>s</small></div>
+            <div><span>Tiempo hasta la altura máxima</span><strong id="resAscentTime">—</strong><small>s</small></div>
+            <div><span>Alcance horizontal (R<sub>max</sub>)</span><strong id="resRange">—</strong><small>m</small></div>
+            <div><span>Altura máxima (H<sub>max</sub>)</span><strong id="resMaxHeight">—</strong><small>m</small></div>
+            <div><span>Posición del vértice (x, y)</span><strong id="resVertex">—</strong><small>m</small></div>
+            <div><span>Velocidad inicial en X (V<sub>0x</sub>)</span><strong id="resVx0">—</strong><small>m/s</small></div>
+            <div><span>Velocidad inicial en Y (V<sub>0y</sub>)</span><strong id="resVy0">—</strong><small>m/s</small></div>
+            <div><span>Velocidad al impactar</span><strong id="resImpactSpeed">—</strong><small>m/s</small></div>
             <div><span>Ángulo de impacto</span><strong id="resImpactAngle">—</strong><small>°</small></div>
-            <div><span>Tiempo de vuelo</span><strong id="resTiempo">—</strong><small>s</small></div>
-            <div><span>Energía mecánica</span><strong id="resE">—</strong><small>J</small></div>
-            <div><span>Momento inicial</span><strong id="resMomentum">—</strong><small>kg·m/s</small></div>
           </div>
         </section>
       </div>
