@@ -10,7 +10,8 @@
       items: [
         ["components", "Componentes iniciales v₀x y v₀y"],
         ["timeMax", "Tiempo para alcanzar la altura máxima"],
-        ["maxHeight", "Hmax — Altura máxima respecto al suelo"],
+        ["maxHeight", "Hmax — Altura máxima desde el lanzamiento"],
+        ["yMax", "Ymax — Altura máxima respecto al suelo"],
         ["flightTime", "Tiempo total de vuelo"],
         ["range", "Rmax — Alcance desde el lanzamiento"],
         ["groundDistance", "Dmax — Distancia desde el origen"],
@@ -342,11 +343,16 @@
 
   function resolverEstadoBase(initial, final) {
     const ascentTime = initial.vy0 > 0 ? initial.vy0 / initial.g : 0;
-    const hmax = initial.vy0 > 0 ? initial.y0 + initial.vy0 ** 2 / (2 * initial.g) : initial.y0;
+    const reachesApex = initial.vy0 > 0 && (!final.defined || ascentTime <= final.time + 1e-8);
+    const ymax = reachesApex
+      ? initial.y0 + initial.vy0 ** 2 / (2 * initial.g)
+      : Math.max(initial.y0, final.defined ? final.yFinal : initial.y0);
+    const hmax = Math.max(0, ymax - initial.y0);
     const rangeSigned = final.defined ? final.xImpact - initial.x0 : null;
     return {
       ascentTime,
       hmax,
+      ymax,
       rangeSigned,
       rmax: final.defined ? Math.abs(rangeSigned) : null,
       dmax: final.defined ? Math.abs(final.xImpact) : null
@@ -407,7 +413,11 @@
     }
     if (query.tipo === "maxHeight") {
       events.push({ time: base.ascentTime, label: "Altura máxima", description: meta.title, queryId: query.id });
-      return { procedure: createProcedure(meta.title, `y₀ = ${fmt(initial.y0)} m; v₀y = ${fmt(initial.vy0)} m/s; g = ${fmt(initial.g)} m/s²`, "Hmax = y₀ + v₀y²/(2g)", `Hmax = ${fmt(initial.y0)} + (${fmt(initial.vy0)})²/(2·${fmt(initial.g)})`, "La altura se mide respecto al suelo.", `Hmax = ${fmt(base.hmax)} m`), events };
+      return { procedure: createProcedure(meta.title, `v₀y = ${fmt(initial.vy0)} m/s; g = ${fmt(initial.g)} m/s²`, "Hmax = v₀y²/(2g)", `Hmax = (${fmt(initial.vy0)})²/(2·${fmt(initial.g)})`, "Se mide desde la altura de lanzamiento hasta el punto más alto.", `Hmax = ${fmt(base.hmax)} m desde el lanzamiento`), events };
+    }
+    if (query.tipo === "yMax") {
+      events.push({ time: base.ascentTime, label: "Altura máxima", description: meta.title, queryId: query.id });
+      return { procedure: createProcedure(meta.title, `y₀ = ${fmt(initial.y0)} m; Hmax = ${fmt(base.hmax)} m`, "Ymax = y₀ + Hmax", `Ymax = ${fmt(initial.y0)} + ${fmt(base.hmax)}`, "Se mide desde el suelo hasta el punto más alto.", `Ymax = ${fmt(base.ymax)} m respecto al suelo`), events };
     }
     if (queryNeedsFinal(query.tipo)) commonFinalError();
     if (query.tipo === "flightTime") {
@@ -450,8 +460,8 @@
       const solved = rootsAtHeight(initial, param.value);
       const filtered = filtrarSolucionesFisicas(solved.times, final);
       if (!filtered.physical.length) {
-        const why = solved.discriminant < 0 || param.value > base.hmax + 1e-8
-          ? `La altura solicitada (${fmt(param.value)} m) supera Hmax (${fmt(base.hmax)} m).`
+        const why = solved.discriminant < 0 || param.value > base.ymax + 1e-8
+          ? `La altura solicitada (${fmt(param.value)} m) supera Ymax (${fmt(base.ymax)} m respecto al suelo).`
           : filtered.discarded.length ? "Las soluciones matemáticas ocurren después del impacto."
             : "La altura no pertenece a la trayectoria física.";
         if (query.tipo === "reachesHeight") {
@@ -619,7 +629,7 @@
   function ordenarEventos(events, initial, final, base) {
     const all = [{ time: 0, label: "Lanzamiento", description: "Instante inicial" }, ...events];
     if (initial.vy0 > 0 && (!final.defined || base.ascentTime <= final.time + 1e-8)) {
-      all.push({ time: base.ascentTime, label: "Altura máxima", description: `Hmax = ${fmt(base.hmax)} m` });
+      all.push({ time: base.ascentTime, label: "Altura máxima", description: `Hmax = ${fmt(base.hmax)} m desde el lanzamiento; Ymax = ${fmt(base.ymax)} m respecto al suelo` });
     }
     if (final.defined) all.push({ time: final.time, label: "Impacto", description: `Punto final en (${fmt(final.xImpact)}, ${fmt(final.yFinal)}) m` });
     return all

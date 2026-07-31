@@ -328,7 +328,7 @@
             <div class="calculation-grid" id="calculationGrid">
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="components"><span><strong>Componentes iniciales</strong><small>v₀x y v₀y</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical parabolic"><input type="checkbox" value="timeMax"><span><strong>Tiempo a altura máxima</strong><small>t<sub>subida</sub></small><em class="availability-reason"></em></span></label>
-              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="maxHeight"><span><strong>Hmax — Altura máxima</strong><small>Respecto al suelo</small><em class="availability-reason"></em></span></label>
+              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="maxHeight"><span><strong>Hmax — Altura ganada</strong><small>Desde el punto de lanzamiento</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="flightTime"><span><strong>Tiempo total de vuelo</strong><small>t<sub>vuelo</sub></small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="range"><span><strong>Rmax — Alcance</strong><small>Desde el punto de lanzamiento</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="groundDistance"><span><strong>Dmax — Distancia</strong><small>Desde el origen del suelo</small><em class="availability-reason"></em></span></label>
@@ -443,7 +443,8 @@
             <div class="canvas-wrap">
               <canvas id="simCanvas" aria-label="Plano cartesiano animado de la trayectoria del proyectil"></canvas>
               <aside class="canvas-data" aria-label="Resultados principales de la trayectoria">
-                <div><span>Hmax · Altura respecto al suelo</span><strong id="overlayHmax">— m</strong></div>
+                <div><span>Hmax · Desde el lanzamiento</span><strong id="overlayHmax">— m</strong></div>
+                <div><span>Ymax · Respecto al suelo</span><strong id="overlayYmax">— m</strong></div>
                 <div><span>Rmax · Desde el lanzamiento</span><strong id="overlayRmax">— m</strong></div>
                 <div><span>Dmax · Desde el origen</span><strong id="overlayDmax">— m</strong></div>
                 <div><span>Impacto</span><strong id="overlayImpact">— m/s</strong></div>
@@ -478,7 +479,8 @@
               <div><span>v₀</span><strong id="resV0">—</strong><small>m/s</small></div>
               <div><span>θ</span><strong id="resAngle">—</strong><small>°</small></div>
               <div><span>t total</span><strong id="resTime">—</strong><small>s</small></div>
-              <div><span>Hmax · respecto al suelo</span><strong id="resMaxHeight">—</strong><small>m</small></div>
+              <div><span>Hmax · desde el lanzamiento</span><strong id="resMaxHeight">—</strong><small>m</small></div>
+              <div><span>Ymax · respecto al suelo</span><strong id="resYMax">—</strong><small>m</small></div>
               <div><span>Rmax · desde lanzamiento</span><strong id="resRange">—</strong><small>m</small></div>
               <div><span>Dmax · desde origen</span><strong id="resGroundDistance">—</strong><small>m</small></div>
               <div><span>|vf|</span><strong id="resImpactSpeed">—</strong><small>m/s</small></div>

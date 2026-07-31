@@ -34,7 +34,7 @@ const FIELD_DEFINITIONS = {
 const TARGET_TITLES = {
   components: "Componentes iniciales",
   timeMax: "Tiempo para alcanzar la altura máxima",
-  maxHeight: "Hmax — Altura máxima respecto al suelo",
+  maxHeight: "Hmax — Altura máxima desde el lanzamiento",
   flightTime: "Tiempo total de vuelo",
   range: "Rmax — Alcance desde el punto de lanzamiento",
   groundDistance: "Dmax — Distancia desde el origen del suelo",
@@ -159,6 +159,7 @@ const dom = {
   canvas: $("simCanvas"),
   badge: $("statusBadge"),
   overlayHmax: $("overlayHmax"),
+  overlayYmax: $("overlayYmax"),
   overlayRmax: $("overlayRmax"),
   overlayDmax: $("overlayDmax"),
   overlayImpact: $("overlayImpact"),
@@ -173,7 +174,7 @@ Object.values(FIELD_DEFINITIONS).forEach(definition => {
   definition.unitElement = definition.unit ? $(definition.unit) : null;
 });
 ["T", "X", "Y", "Vx", "Vy", "Speed"].forEach(key => dom[`tele${key}`] = $(`tele${key}`));
-["V0", "Angle", "Time", "Range", "GroundDistance", "MaxHeight", "ImpactSpeed"].forEach(key => dom[`res${key}`] = $(`res${key}`));
+["V0", "Angle", "Time", "Range", "GroundDistance", "MaxHeight", "YMax", "ImpactSpeed"].forEach(key => dom[`res${key}`] = $(`res${key}`));
 
 const ctx = dom.canvas.getContext("2d");
 const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -757,18 +758,18 @@ function resolveTarget(target, raw, d) {
     }
     case "maxHeight": {
       const upward = d.vy0 > 0;
-      const rise = upward ? d.vy0 * d.vy0 / (2 * d.g) : 0;
-      const value = d.y0 + rise;
+      const value = upward ? d.vy0 * d.vy0 / (2 * d.g) : 0;
+      const yMax = d.y0 + value;
       return {
         procedure: procedure(
           TARGET_TITLES[target],
           dataLine(`y₀ = ${fmt(d.y0)} m`, `v₀y = ${fmt(d.vy0)} m/s`, `g = ${fmt(d.g)} m/s²`),
           upward ? "vy² = v₀y² − 2g(y − y₀); en la altura máxima, vy = 0" : "Si v₀y ≤ 0, el proyectil desciende desde el lanzamiento.",
-          upward ? `0 = (${fmt(d.vy0)})² − 2(${fmt(d.g)})(Hmax − ${fmt(d.y0)})` : `v₀y = ${fmt(d.vy0)} m/s ≤ 0`,
-          upward ? "Hmax = y₀ + v₀y²/(2g)" : "Hmax = y₀",
-          `Hmax = ${fmt(value)} m respecto al suelo`
+          upward ? `0 = (${fmt(d.vy0)})² − 2(${fmt(d.g)})Hmax` : `v₀y = ${fmt(d.vy0)} m/s ≤ 0`,
+          upward ? "Hmax = v₀y²/(2g)" : "Hmax = 0",
+          `Hmax = ${fmt(value)} m desde el lanzamiento; Ymax = ${fmt(yMax)} m respecto al suelo`
         ),
-        updates: { maxHeight: value, hmax: value }
+        updates: { maxHeight: value, hmax: value, ymax: yMax }
       };
     }
     case "flightTime": {
@@ -1308,6 +1309,7 @@ function calculateSimulation(parameters) {
   const maxHeight = vy0 > 0 && vy0 / g <= flightTime
     ? y0 + vy0 * vy0 / (2 * g)
     : Math.max(y0, finalHeight);
+  const hmax = Math.max(0, maxHeight - y0);
   const rangeSigned = vx0 * flightTime;
   const rmax = Math.abs(rangeSigned);
   const xImpact = x0 + rangeSigned;
@@ -1328,6 +1330,8 @@ function calculateSimulation(parameters) {
     flightTime,
     ascentTime,
     maxHeight,
+    hmax,
+    ymax: maxHeight,
     range: rmax,
     rmax,
     rangeSigned,
@@ -1461,7 +1465,8 @@ function renderSimulationSummary(p) {
     row.append(dt, dd);
     return row;
   }));
-  dom.overlayHmax.textContent = `${fmt(p.maxHeight)} m`;
+  dom.overlayHmax.textContent = `${fmt(p.hmax)} m`;
+  dom.overlayYmax.textContent = `${fmt(p.ymax)} m`;
   dom.overlayRmax.textContent = `${fmt(p.rmax)} m`;
   dom.overlayDmax.textContent = `${fmt(p.dmax)} m`;
   dom.overlayImpact.textContent = `${fmt(p.impactSpeed)} m/s`;
@@ -1472,7 +1477,8 @@ function renderSimulationSummary(p) {
   dom.resTime.textContent = fmt(p.flightTime);
   dom.resRange.textContent = fmt(p.rmax);
   dom.resGroundDistance.textContent = fmt(p.dmax);
-  dom.resMaxHeight.textContent = fmt(p.maxHeight);
+  dom.resMaxHeight.textContent = fmt(p.hmax);
+  dom.resYMax.textContent = fmt(p.ymax);
   dom.resImpactSpeed.textContent = fmt(p.impactSpeed);
   updateTelemetry(pointAtTime(p, 0));
 }
