@@ -90,6 +90,8 @@
     addTimeQuestion: document.getElementById("addTimeQuestion"),
     questionList: document.getElementById("questionList"),
     questionEmpty: document.getElementById("questionEmpty"),
+    requestSummary: document.getElementById("exerciseRequestSummary"),
+    summaryGrid: document.getElementById("exerciseSummaryGrid"),
     events: document.getElementById("exerciseEvents"),
     eventSelect: document.getElementById("exerciseEventSelect"),
     eventDescription: document.getElementById("exerciseEventDescription")
@@ -541,6 +543,79 @@
     return item;
   }
 
+  function summaryDefinition(title, rows) {
+    const section = document.createElement("section");
+    section.className = "exercise-summary-block";
+    const heading = document.createElement("h4");
+    heading.textContent = title;
+    const list = document.createElement("dl");
+    rows.forEach(([term, value]) => {
+      const row = document.createElement("div");
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = term;
+      dd.textContent = value;
+      row.append(dt, dd);
+      list.append(row);
+    });
+    section.append(heading, list);
+    return section;
+  }
+
+  function finalConditionSummary(final, initial) {
+    if (!final.defined) return [["Condición", "Punto final no definido"]];
+    const names = {
+      ground: "Impacta en el suelo",
+      height: "Impacta a una altura determinada",
+      sameHeight: "Termina a la altura inicial",
+      time: "Termina en un tiempo determinado",
+      horizontal: "Impacta en una posición horizontal"
+    };
+    return [
+      ["Condición", names[final.type] ?? "Punto final definido"],
+      ["t final", `${fmt(final.time)} s`],
+      ["x impacto", `${fmt(final.xImpact)} m`],
+      ["y impacto", `${fmt(final.yFinal)} m`],
+      ["Altura inicial", `${fmt(initial.y0)} m`]
+    ];
+  }
+
+  function renderExerciseSummary(movement) {
+    const { initial, final, resultados } = movement;
+    const initialBlock = summaryDefinition("Datos del lanzamiento", [
+      ["Tipo", initial.launchType === "vertical" ? "Vertical" : initial.launchType === "horizontal" ? "Horizontal" : "Parabólico"],
+      ["v₀", `${fmt(initial.v0)} m/s`],
+      ["θ", `${fmt(initial.angle)}°`],
+      ["x₀", `${fmt(initial.x0)} m`],
+      ["y₀", `${fmt(initial.y0)} m`],
+      ["g", `${fmt(initial.g)} m/s²`]
+    ]);
+    const finalBlock = summaryDefinition("Condición final", finalConditionSummary(final, initial));
+    const requestedBlock = document.createElement("section");
+    requestedBlock.className = "exercise-summary-block";
+    const heading = document.createElement("h4");
+    heading.textContent = "Resultados solicitados";
+    const list = document.createElement("ol");
+    list.className = "requested-results-list";
+    resultados.forEach((item, index) => {
+      const li = document.createElement("li");
+      const letter = document.createElement("span");
+      letter.className = "result-letter";
+      letter.textContent = String.fromCharCode(97 + index);
+      const copy = document.createElement("div");
+      const title = document.createElement("strong");
+      const result = document.createElement("span");
+      title.textContent = item.title;
+      result.textContent = item.result;
+      copy.append(title, result);
+      li.append(letter, copy);
+      list.append(li);
+    });
+    requestedBlock.append(heading, list);
+    ui.summaryGrid.replaceChildren(initialBlock, finalBlock, requestedBlock);
+    ui.requestSummary.classList.remove("hidden");
+  }
+
   function ordenarEventos(events, initial, final, base) {
     const all = [{ time: 0, label: "Lanzamiento", description: "Instante inicial" }, ...events];
     if (initial.vy0 > 0 && (!final.defined || base.ascentTime <= final.time + 1e-8)) {
@@ -566,7 +641,7 @@
       const initial = leerDatosIniciales();
       const final = leerCondicionFinal(initial);
       const base = resolverEstadoBase(initial, final);
-      const movement = { initial, final, base, consultas: structuredClone(consultas), resultados: {}, eventos: [] };
+      const movement = { initial, final, base, consultas: structuredClone(consultas), resultados: [], eventos: [] };
       const procedures = consultas.some(query => query.tipo === "components") ? [] : [commonComponentsProcedure(initial)];
       const events = [];
       consultas.forEach((query, index) => {
@@ -576,12 +651,17 @@
         const resolved = resolverConsulta(query, movement);
         resolved.procedure.title = `${String.fromCharCode(97 + index)}) ${resolved.procedure.title}`;
         procedures.push(resolved.procedure);
+        movement.resultados.push({
+          title: QUERY_META[query.tipo].title,
+          result: resolved.procedure.result
+        });
         events.push(...resolved.events);
       });
       movement.eventos = ordenarEventos(events, initial, final, base);
       movimientoActual = movement;
       state.solution = { v2: true, movement, procedures };
       dom.procedureList.replaceChildren(...procedures.map(renderProcedureCard));
+      renderExerciseSummary(movement);
       dom.solutionPicker.classList.add("hidden");
       dom.solutionSection.classList.remove("hidden");
       dom.solutionSection.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
@@ -688,6 +768,8 @@
     dom.solutionSection.classList.add("hidden");
     dom.simulationPanel.classList.add("hidden");
     dom.procedureList.replaceChildren();
+    ui.summaryGrid.replaceChildren();
+    ui.requestSummary.classList.add("hidden");
     clearV2Error();
     updateLaunchTypeUI();
     updateFinalUI();
