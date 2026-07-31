@@ -124,10 +124,21 @@
                 <small class="field-hint" id="angleHint">Entre −90° y 90°.</small>
               </div>
 
+              <div class="quantity-field" data-field="x0" data-types="vertical horizontal parabolic">
+                <label for="knownX0">Posición horizontal inicial <span>x₀</span></label>
+                <div class="value-unit">
+                  <input type="number" id="knownX0" value="0" step="any" inputmode="decimal">
+                  <select id="unitX0" aria-label="Unidad de posición horizontal inicial">
+                    <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
+                  </select>
+                </div>
+                <small class="field-hint">Medida desde el origen del plano ubicado en el suelo.</small>
+              </div>
+
               <div class="quantity-field" data-field="y0" data-types="vertical horizontal parabolic">
                 <label for="knownY0">Altura inicial <span>y₀</span></label>
                 <div class="value-unit">
-                  <input type="number" id="knownY0" step="any" inputmode="decimal" placeholder="Vacío">
+                  <input type="number" id="knownY0" min="0" step="any" inputmode="decimal" placeholder="Vacío">
                   <select id="unitY0" aria-label="Unidad de altura inicial">
                     <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
                   </select>
@@ -137,7 +148,7 @@
               <div class="quantity-field" data-field="y" data-types="vertical horizontal parabolic">
                 <label for="knownY">Altura final o específica <span>y</span></label>
                 <div class="value-unit">
-                  <input type="number" id="knownY" step="any" inputmode="decimal" placeholder="Vacío">
+                  <input type="number" id="knownY" min="0" step="any" inputmode="decimal" placeholder="Vacío">
                   <select id="unitY" aria-label="Unidad de altura final">
                     <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
                   </select>
@@ -217,7 +228,7 @@
               <div class="quantity-field" data-field="g" data-types="vertical horizontal parabolic">
                 <label for="knownG">Gravedad <span>g</span></label>
                 <div class="value-unit">
-                  <input type="number" id="knownG" value="9.8" min="0.0001" step="any" inputmode="decimal">
+                  <input type="number" id="knownG" value="9.81" min="0.0001" step="any" inputmode="decimal">
                   <select aria-label="Unidad de gravedad" disabled><option>m/s²</option></select>
                 </div>
               </div>
@@ -240,9 +251,10 @@
             <div class="calculation-grid" id="calculationGrid">
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="components"><span><strong>Componentes iniciales</strong><small>v₀x y v₀y</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical parabolic"><input type="checkbox" value="timeMax"><span><strong>Tiempo a altura máxima</strong><small>t<sub>subida</sub></small><em class="availability-reason"></em></span></label>
-              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="maxHeight"><span><strong>Altura máxima</strong><small>y<sub>máx</sub></small><em class="availability-reason"></em></span></label>
+              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="maxHeight"><span><strong>Hmax — Altura máxima</strong><small>Respecto al suelo</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="flightTime"><span><strong>Tiempo total de vuelo</strong><small>t<sub>vuelo</sub></small><em class="availability-reason"></em></span></label>
-              <label class="calculation-option" data-types="horizontal parabolic"><input type="checkbox" value="range"><span><strong>Alcance horizontal</strong><small>R</small><em class="availability-reason"></em></span></label>
+              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="range"><span><strong>Rmax — Alcance</strong><small>Desde el punto de lanzamiento</small><em class="availability-reason"></em></span></label>
+              <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="groundDistance"><span><strong>Dmax — Distancia</strong><small>Desde el origen del suelo</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="horizontal parabolic"><input type="checkbox" value="positionX"><span><strong>Posición horizontal</strong><small>x(t)</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="vertical horizontal parabolic"><input type="checkbox" value="positionY"><span><strong>Posición vertical</strong><small>y(t)</small><em class="availability-reason"></em></span></label>
               <label class="calculation-option" data-types="horizontal parabolic"><input type="checkbox" value="velocityX"><span><strong>Velocidad horizontal</strong><small>vx(t)</small><em class="availability-reason"></em></span></label>
@@ -258,7 +270,7 @@
           </article>
 
           <div class="resolver-actions">
-            <button class="btn btn-primary" id="solveButton" type="submit">Resolver ejercicio</button>
+            <button class="btn btn-primary" id="solveButton" type="submit" disabled>Resolver ejercicio</button>
             <button class="btn btn-ghost" id="clearResolver" type="button">Limpiar datos</button>
           </div>
           <div class="message error-message hidden" id="resolverError" role="alert"></div>
@@ -292,9 +304,10 @@
           <form class="free-form" id="freeForm" novalidate>
             <label>Rapidez inicial v₀ <span>m/s</span><input type="number" id="freeV0" value="25" min="0" step="any"></label>
             <label>Ángulo θ <span>°</span><input type="number" id="freeAngle" value="45" min="-90" max="90" step="any"></label>
-            <label>Altura inicial y₀ <span>m</span><input type="number" id="freeY0" value="0" step="any"></label>
-            <label>Altura final y <span>m</span><input type="number" id="freeY" value="0" step="any"></label>
-            <label>Gravedad g <span>m/s²</span><input type="number" id="freeG" value="9.8" min="0.0001" step="any"></label>
+            <label>Posición inicial x₀ <span>m</span><input type="number" id="freeX0" value="0" step="any"></label>
+            <label>Altura inicial y₀ <span>m</span><input type="number" id="freeY0" value="0" min="0" step="any"></label>
+            <label>Altura final y <span>m</span><input type="number" id="freeY" value="0" min="0" step="any"></label>
+            <label>Gravedad g <span>m/s²</span><input type="number" id="freeG" value="9.81" min="0.0001" step="any"></label>
             <button class="btn btn-primary" type="submit">Preparar simulación</button>
           </form>
           <div class="message error-message hidden" id="freeError" role="alert"></div>
@@ -341,8 +354,9 @@
             <div class="canvas-wrap">
               <canvas id="simCanvas" aria-label="Plano cartesiano animado de la trayectoria del proyectil"></canvas>
               <aside class="canvas-data" aria-label="Resultados principales de la trayectoria">
-                <div><span>Alcance</span><strong id="overlayRange">— m</strong></div>
-                <div><span>Altura máxima</span><strong id="overlayHeight">— m</strong></div>
+                <div><span>Hmax · Altura respecto al suelo</span><strong id="overlayHmax">— m</strong></div>
+                <div><span>Rmax · Desde el lanzamiento</span><strong id="overlayRmax">— m</strong></div>
+                <div><span>Dmax · Desde el origen</span><strong id="overlayDmax">— m</strong></div>
                 <div><span>Impacto</span><strong id="overlayImpact">— m/s</strong></div>
                 <div><span>Tiempo total</span><strong id="overlayTime">— s</strong></div>
                 <div class="equation-row"><span>Trayectoria</span><code id="overlayEquation">Sin calcular</code></div>
@@ -375,8 +389,9 @@
               <div><span>v₀</span><strong id="resV0">—</strong><small>m/s</small></div>
               <div><span>θ</span><strong id="resAngle">—</strong><small>°</small></div>
               <div><span>t total</span><strong id="resTime">—</strong><small>s</small></div>
-              <div><span>R</span><strong id="resRange">—</strong><small>m</small></div>
-              <div><span>y máx.</span><strong id="resMaxHeight">—</strong><small>m</small></div>
+              <div><span>Hmax · respecto al suelo</span><strong id="resMaxHeight">—</strong><small>m</small></div>
+              <div><span>Rmax · desde lanzamiento</span><strong id="resRange">—</strong><small>m</small></div>
+              <div><span>Dmax · desde origen</span><strong id="resGroundDistance">—</strong><small>m</small></div>
               <div><span>|vf|</span><strong id="resImpactSpeed">—</strong><small>m/s</small></div>
             </div>
           </article>

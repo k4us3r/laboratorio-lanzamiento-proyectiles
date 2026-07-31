@@ -18,6 +18,7 @@ const UNIT_FACTORS = {
 const FIELD_DEFINITIONS = {
   v0: { input: "knownV0", unit: "unitV0", name: "velocidad inicial" },
   angle: { input: "knownAngle", name: "ángulo de lanzamiento" },
+  x0: { input: "knownX0", unit: "unitX0", name: "posición horizontal inicial" },
   y0: { input: "knownY0", unit: "unitY0", name: "altura inicial" },
   y: { input: "knownY", unit: "unitY", name: "altura final o específica" },
   x: { input: "knownX", unit: "unitX", name: "desplazamiento horizontal" },
@@ -33,9 +34,10 @@ const FIELD_DEFINITIONS = {
 const TARGET_TITLES = {
   components: "Componentes iniciales",
   timeMax: "Tiempo para alcanzar la altura máxima",
-  maxHeight: "Altura máxima",
+  maxHeight: "Hmax — Altura máxima respecto al suelo",
   flightTime: "Tiempo total de vuelo",
-  range: "Alcance horizontal",
+  range: "Rmax — Alcance desde el punto de lanzamiento",
+  groundDistance: "Dmax — Distancia desde el origen del suelo",
   positionX: "Posición horizontal en un tiempo",
   positionY: "Posición vertical en un tiempo",
   velocityX: "Velocidad horizontal en un tiempo",
@@ -47,6 +49,67 @@ const TARGET_TITLES = {
   heightAtX: "Altura al alcanzar una distancia horizontal",
   initialSpeed: "Velocidad inicial",
   initialAngle: "Ángulo de lanzamiento"
+};
+
+const DEPENDENCIAS = {
+  components: [["v0", "angle"], ["vx0", "vy0"]],
+  timeMax: [["vy0", "g"]],
+  maxHeight: [["vy0", "y0", "g"]],
+  flightTime: [["y0", "y", "vy0", "g"], ["y0", "y", "v0", "angle", "g"]],
+  range: [["vx0", "endTime"], ["v0", "angle", "endTime"]],
+  groundDistance: [["x0", "rangeSigned"]],
+  positionX: [["x0", "vx0", "t"], ["x0", "v0", "angle", "t"]],
+  positionY: [["y0", "vy0", "t", "g"], ["y0", "v0", "angle", "t", "g"]],
+  velocityX: [["vx0", "t"], ["v0", "angle", "t"]],
+  velocityY: [["vy0", "t", "g"], ["v0", "angle", "t", "g"]],
+  speed: [["vx0", "vy0", "t", "g"], ["v0", "angle", "t", "g"], ["velocityX", "velocityY"]],
+  impact: [["vx0", "vy0", "endTime", "g"], ["v0", "angle", "endTime", "g"]],
+  impactAngle: [["impactVx", "impactVy"]],
+  timeAtHeight: [["y0", "y", "vy0", "g"], ["y0", "y", "v0", "angle", "g"]],
+  heightAtX: [["x", "vx0", "y0", "vy0", "g"], ["x", "v0", "angle", "y0", "g"]],
+  initialSpeed: [["vx0", "vy0"], ["rangeInput", "angle", "g", "sameHeight"]],
+  initialAngle: [["vx0", "vy0"], ["rangeInput", "v0", "g", "sameHeight"]]
+};
+
+const TARGET_OUTPUTS = {
+  components: ["vx0", "vy0"],
+  timeMax: ["ascentTime"],
+  maxHeight: ["hmax"],
+  flightTime: ["flightTime", "endTime"],
+  range: ["rmax", "rangeSigned"],
+  groundDistance: ["dmax", "xImpact"],
+  positionX: ["positionX"],
+  positionY: ["positionY"],
+  velocityX: ["velocityX"],
+  velocityY: ["velocityY"],
+  speed: ["speed"],
+  impact: ["impactVx", "impactVy", "impactSpeed"],
+  impactAngle: ["impactAngle"],
+  timeAtHeight: ["timeAtHeight"],
+  heightAtX: ["heightAtX"],
+  initialSpeed: ["v0"],
+  initialAngle: ["angle"]
+};
+
+const FACT_LABELS = {
+  v0: "v₀",
+  angle: "θ",
+  x0: "x₀",
+  y0: "y₀",
+  y: "altura final",
+  x: "desplazamiento x",
+  t: "tiempo t",
+  vx0: "v₀x",
+  vy0: "v₀y",
+  g: "gravedad",
+  endTime: "tiempo de vuelo",
+  rangeSigned: "Rmax",
+  impactVx: "vx de impacto",
+  impactVy: "vy de impacto",
+  velocityX: "velocidad horizontal",
+  velocityY: "velocidad vertical",
+  rangeInput: "alcance",
+  sameHeight: "misma altura"
 };
 
 const state = {
@@ -68,6 +131,7 @@ const dom = {
   resolverMode: $("resolverMode"),
   freeMode: $("freeMode"),
   resolverForm: $("resolverForm"),
+  solveButton: $("solveButton"),
   verticalDirectionGroup: $("verticalDirectionGroup"),
   verticalDirection: $("verticalDirection"),
   sameHeight: $("sameHeight"),
@@ -90,8 +154,9 @@ const dom = {
   reset: $("btnReset"),
   canvas: $("simCanvas"),
   badge: $("statusBadge"),
-  overlayRange: $("overlayRange"),
-  overlayHeight: $("overlayHeight"),
+  overlayHmax: $("overlayHmax"),
+  overlayRmax: $("overlayRmax"),
+  overlayDmax: $("overlayDmax"),
   overlayImpact: $("overlayImpact"),
   overlayTime: $("overlayTime"),
   overlayEquation: $("overlayEquation"),
@@ -104,7 +169,7 @@ Object.values(FIELD_DEFINITIONS).forEach(definition => {
   definition.unitElement = definition.unit ? $(definition.unit) : null;
 });
 ["T", "X", "Y", "Vx", "Vy", "Speed"].forEach(key => dom[`tele${key}`] = $(`tele${key}`));
-["V0", "Angle", "Time", "Range", "MaxHeight", "ImpactSpeed"].forEach(key => dom[`res${key}`] = $(`res${key}`));
+["V0", "Angle", "Time", "Range", "GroundDistance", "MaxHeight", "ImpactSpeed"].forEach(key => dom[`res${key}`] = $(`res${key}`));
 
 const ctx = dom.canvas.getContext("2d");
 const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -186,6 +251,8 @@ function readKnownData(strict = false) {
 
   if (data.v0 !== null && data.v0 < 0) return { error: "La velocidad inicial debe ser mayor o igual que cero." };
   if (data.vf !== null && data.vf < 0) return { error: "La rapidez final debe ser mayor o igual que cero." };
+  if (data.y0 !== null && data.y0 < 0) return { error: "La altura inicial respecto al suelo debe ser mayor o igual que cero." };
+  if (data.y !== null && data.y < 0) return { error: "La altura final respecto al suelo debe ser mayor o igual que cero." };
   if (data.t !== null && data.t < 0) return { error: "El tiempo debe ser mayor o igual que cero." };
   if (data.g === null || data.g <= 0) return { error: "La gravedad debe ser mayor que cero." };
   if (data.angle !== null && (data.angle < -90 || data.angle > 90)) return { error: "El ángulo debe estar entre −90° y 90°." };
@@ -307,119 +374,170 @@ function endTimeInfo(d) {
   return { error: "No se ha definido dónde termina el movimiento." };
 }
 
-function availability(target, raw, d) {
-  const missing = [];
-  const need = (value, name) => {
-    if (!finite(value)) missing.push(name);
-  };
+function crearDatosIngresados(raw) {
+  const datosIngresados = new Set();
+  Object.keys(FIELD_DEFINITIONS).forEach(key => {
+    if (finite(raw[key])) datosIngresados.add(key);
+  });
+  if (raw.sameHeight) datosIngresados.add("sameHeight");
+  if (finite(raw.x)) datosIngresados.add("rangeInput");
+  if (finite(raw.t)) datosIngresados.add("endTime");
+  if (raw.launchType === "horizontal") {
+    datosIngresados.add("angle");
+    datosIngresados.add("vy0");
+  }
+  if (raw.launchType === "vertical") {
+    datosIngresados.add("angle");
+    datosIngresados.add("vx0");
+  }
+  return datosIngresados;
+}
 
-  switch (target) {
-    case "components":
-      need(d.vx0, "v₀x o v₀ y θ");
-      need(d.vy0, "v₀y o v₀ y θ");
-      break;
-    case "timeMax":
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      if (!missing.length && d.vy0 <= EPS) return { ok: false, reason: "La velocidad vertical debe apuntar hacia arriba." };
-      break;
-    case "maxHeight":
-      need(d.y0, "y₀");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      break;
-    case "flightTime":
-      need(d.y0, "y₀");
-      need(d.y, "altura final o misma altura");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      break;
-    case "range": {
-      need(d.vx0, "v₀x o v₀ y θ");
-      if (!finite(d.t) && !(finite(d.y0) && finite(d.y) && finite(d.vy0) && finite(d.g))) {
-        missing.push("tiempo total o condición de altura final");
+function validarObjetivoFisico(target, raw, d) {
+  if (target === "timeMax" && finite(d.vy0) && d.vy0 <= EPS) {
+    return { ok: false, reason: "La velocidad vertical debe apuntar hacia arriba." };
+  }
+  if ((target === "flightTime" || target === "timeAtHeight") &&
+      [d.y0, d.y, d.vy0, d.g].every(finite)) {
+    const times = solveHeightTimes(d.y0, d.vy0, d.g, d.y);
+    if (times.error) return { ok: false, reason: times.error };
+  }
+  if (target === "heightAtX" && finite(d.vx0) && Math.abs(d.vx0) < EPS) {
+    return { ok: false, reason: "v₀x debe ser distinta de cero." };
+  }
+  if (target === "initialSpeed") {
+    if (finite(raw.v0)) return { ok: false, reason: "La velocidad inicial ya fue ingresada." };
+    if (raw.sameHeight && finite(raw.x) && finite(raw.angle) && finite(raw.g)) {
+      const denominator = Math.sin(2 * radians(raw.angle));
+      if (Math.abs(denominator) < EPS || raw.g * raw.x / denominator < 0) {
+        return { ok: false, reason: "El alcance y el ángulo no producen una velocidad inicial real." };
       }
-      break;
     }
-    case "positionX":
-      need(d.t, "t");
-      need(d.vx0, "v₀x o v₀ y θ");
-      break;
-    case "positionY":
-      need(d.t, "t");
-      need(d.y0, "y₀");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      break;
-    case "velocityX":
-      need(d.t, "t");
-      need(d.vx0, "v₀x o v₀ y θ");
-      break;
-    case "velocityY":
-      need(d.t, "t");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      break;
-    case "speed":
-      need(d.t, "t");
-      need(d.vx0, "v₀x o v₀ y θ");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      break;
-    case "impact":
-    case "impactAngle":
-      need(d.vx0, "v₀x o v₀ y θ");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      if (!finite(d.t) && !(finite(d.y0) && finite(d.y))) missing.push("tiempo total o altura final");
-      break;
-    case "timeAtHeight": {
-      need(d.y0, "y₀");
-      need(d.y, "altura específica y");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      if (!missing.length) {
-        const times = solveHeightTimes(d.y0, d.vy0, d.g, d.y);
-        if (times.error) return { ok: false, reason: times.error };
+  }
+  if (target === "initialAngle") {
+    if (finite(raw.angle)) return { ok: false, reason: "El ángulo de lanzamiento ya fue ingresado." };
+    if (raw.sameHeight && finite(raw.x) && raw.x > 0 && finite(raw.v0) && raw.v0 > 0 && finite(raw.g)) {
+      const ratio = raw.g * raw.x / (raw.v0 * raw.v0);
+      if (ratio > 1 + EPS) {
+        return { ok: false, reason: "El alcance solicitado supera el máximo posible con esa velocidad." };
       }
-      break;
     }
-    case "heightAtX":
-      need(d.x, "x");
-      need(d.vx0, "v₀x o v₀ y θ");
-      need(d.y0, "y₀");
-      need(d.vy0, "v₀y o v₀ y θ");
-      need(d.g, "g");
-      if (!missing.length && Math.abs(d.vx0) < EPS) return { ok: false, reason: "v₀x debe ser distinta de cero." };
-      break;
-    case "initialSpeed":
-      if (finite(raw.v0)) return { ok: false, reason: "La velocidad inicial ya fue ingresada." };
-      if (finite(raw.vx0) && finite(raw.vy0)) break;
-      if (raw.launchType === "vertical" && finite(raw.vy0)) break;
-      if (raw.launchType === "horizontal" && finite(raw.vx0)) break;
-      if (raw.sameHeight && finite(raw.x) && finite(raw.angle) && finite(raw.g)) {
-        const denominator = Math.sin(2 * radians(raw.angle));
-        if (Math.abs(denominator) < EPS || raw.g * raw.x / denominator < 0) {
-          return { ok: false, reason: "El alcance y el ángulo no producen una velocidad inicial real." };
-        }
-        break;
-      }
-      return { ok: false, reason: missingReason(["v₀x y v₀y, o alcance, θ y misma altura"]) };
-    case "initialAngle":
-      if (finite(raw.angle)) return { ok: false, reason: "El ángulo de lanzamiento ya fue ingresado." };
-      if (finite(raw.vx0) && finite(raw.vy0)) break;
-      if (raw.sameHeight && finite(raw.x) && raw.x > 0 && finite(raw.v0) && raw.v0 > 0 && finite(raw.g)) {
-        const ratio = raw.g * raw.x / (raw.v0 * raw.v0);
-        if (ratio > 1 + EPS) return { ok: false, reason: "El alcance solicitado supera el máximo posible con esa velocidad." };
-        break;
-      }
-      return { ok: false, reason: missingReason(["v₀x y v₀y, o alcance, v₀ y misma altura"]) };
-    default:
-      return { ok: false, reason: "Caso no programado." };
+  }
+  return { ok: true, reason: "" };
+}
+
+function rutaDisponible(target, facts) {
+  return (DEPENDENCIAS[target] ?? []).find(route => route.every(fact => facts.has(fact))) ?? null;
+}
+
+function expandirObjetivos(baseFacts, targetIds, raw, d) {
+  const facts = new Set(baseFacts);
+  const resolved = new Set();
+  const routes = new Map();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    targetIds.forEach(target => {
+      if (resolved.has(target)) return;
+      const route = rutaDisponible(target, facts);
+      const physical = validarObjetivoFisico(target, raw, d);
+      if (!route || !physical.ok) return;
+      resolved.add(target);
+      routes.set(target, route);
+      (TARGET_OUTPUTS[target] ?? []).forEach(fact => facts.add(fact));
+      changed = true;
+    });
+  }
+  return { facts, resolved, routes };
+}
+
+function resolverDisponibilidadRecursiva(raw, d) {
+  const datosIngresados = crearDatosIngresados(raw);
+  const allTargets = Object.keys(DEPENDENCIAS);
+  const theoretical = expandirObjetivos(datosIngresados, allTargets, raw, d);
+  let datosSeleccionados = new Set(
+    [...dom.calculationGrid.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value)
+  );
+  let selectedClosure = expandirObjetivos(datosIngresados, [...datosSeleccionados], raw, d);
+  const desactivados = [...datosSeleccionados].filter(target => !selectedClosure.resolved.has(target));
+
+  if (desactivados.length) {
+    desactivados.forEach(target => {
+      const input = dom.calculationGrid.querySelector(`input[value="${target}"]`);
+      if (input) input.checked = false;
+    });
+    datosSeleccionados = new Set([...datosSeleccionados].filter(target => !desactivados.includes(target)));
+    selectedClosure = expandirObjetivos(datosIngresados, [...datosSeleccionados], raw, d);
   }
 
-  if (missing.length) return { ok: false, reason: missingReason(missing) };
-  return { ok: true, reason: "" };
+  return {
+    datosIngresados,
+    datosCalculables: theoretical.resolved,
+    datosSeleccionados,
+    datosDisponibles: selectedClosure.facts,
+    objetivosResueltos: selectedClosure.resolved,
+    rutasSeleccionadas: selectedClosure.routes,
+    rutasCalculables: theoretical.routes,
+    desactivados
+  };
+}
+
+function productoresParaFaltantes(route, dependencyState) {
+  const producers = [];
+  route.forEach(fact => {
+    if (dependencyState.datosDisponibles.has(fact)) return;
+    const producer = Object.keys(TARGET_OUTPUTS).find(target =>
+      (TARGET_OUTPUTS[target] ?? []).includes(fact) &&
+      dependencyState.datosCalculables.has(target) &&
+      !dependencyState.datosSeleccionados.has(target)
+    );
+    if (producer && !producers.includes(producer)) producers.push(producer);
+  });
+  return producers;
+}
+
+function mensajeBloqueo(target, dependencyState) {
+  const routes = DEPENDENCIAS[target] ?? [];
+  let bestRoute = routes[0] ?? [];
+  routes.forEach(route => {
+    const missing = route.filter(fact => !dependencyState.datosDisponibles.has(fact)).length;
+    const bestMissing = bestRoute.filter(fact => !dependencyState.datosDisponibles.has(fact)).length;
+    if (missing < bestMissing) bestRoute = route;
+  });
+  const producers = productoresParaFaltantes(bestRoute, dependencyState);
+  if (producers.length) {
+    return `Puede habilitarse calculando primero ${producers.map(target => TARGET_TITLES[target]).join(" y ")}.`;
+  }
+  const missing = bestRoute
+    .filter(fact => !dependencyState.datosDisponibles.has(fact))
+    .map(fact => FACT_LABELS[fact] ?? fact);
+  return missingReason(missing);
+}
+
+function detectarDependenciasCirculares(dependencyState) {
+  const graph = new Map();
+  dependencyState.datosSeleccionados.forEach(target => {
+    const route = dependencyState.rutasSeleccionadas.get(target) ?? [];
+    const dependencies = route
+      .map(fact => Object.keys(TARGET_OUTPUTS).find(candidate =>
+        dependencyState.datosSeleccionados.has(candidate) &&
+        (TARGET_OUTPUTS[candidate] ?? []).includes(fact)
+      ))
+      .filter(Boolean);
+    graph.set(target, dependencies);
+  });
+  const visiting = new Set();
+  const visited = new Set();
+  const visit = target => {
+    if (visiting.has(target)) return true;
+    if (visited.has(target)) return false;
+    visiting.add(target);
+    if ((graph.get(target) ?? []).some(visit)) return true;
+    visiting.delete(target);
+    visited.add(target);
+    return false;
+  };
+  return [...graph.keys()].some(visit);
 }
 
 function updateLaunchTypeUI() {
@@ -466,19 +584,85 @@ function updateSameHeight() {
   }
 }
 
-function updateOptionsAvailable() {
+function updateOptionsAvailable(announceLoss = false) {
   const read = readKnownData(false);
+  if (read.error) {
+    document.querySelectorAll(".calculation-option").forEach(option => {
+      const checkbox = option.querySelector("input");
+      const reason = option.querySelector(".availability-reason");
+      checkbox.disabled = true;
+      checkbox.checked = false;
+      option.classList.remove("available-direct", "available-via", "selected-result", "dependency-lost");
+      option.classList.add("unavailable");
+      option.title = read.error;
+      reason.textContent = read.error;
+    });
+    dom.solveButton.disabled = true;
+    state.dependencyState = null;
+    return;
+  }
+
+  const dependencyState = resolverDisponibilidadRecursiva(read.data, read.derived);
+  state.dependencyState = dependencyState;
+
   document.querySelectorAll(".calculation-option").forEach(option => {
     const checkbox = option.querySelector("input");
     const reason = option.querySelector(".availability-reason");
     const target = checkbox.value;
-    const status = read.error ? { ok: false, reason: read.error } : availability(target, read.data, read.derived);
-    checkbox.disabled = !status.ok;
-    if (!status.ok) checkbox.checked = false;
-    option.classList.toggle("unavailable", !status.ok);
-    option.title = status.ok ? "" : status.reason;
-    reason.textContent = status.reason;
+    const physical = validarObjetivoFisico(target, read.data, read.derived);
+    const directRoute = rutaDisponible(target, dependencyState.datosIngresados);
+    const selectedRoute = rutaDisponible(target, dependencyState.datosDisponibles);
+    const selected = dependencyState.datosSeleccionados.has(target);
+    const available = physical.ok && Boolean(selectedRoute);
+
+    option.classList.remove("available-direct", "available-via", "selected-result", "unavailable", "dependency-lost");
+    checkbox.disabled = !available;
+
+    let message;
+    if (!physical.ok) {
+      message = physical.reason;
+      option.classList.add("unavailable");
+    } else if (selected) {
+      const producers = Object.keys(TARGET_OUTPUTS).filter(candidate =>
+        candidate !== target &&
+        dependencyState.datosSeleccionados.has(candidate) &&
+        selectedRoute.some(fact => (TARGET_OUTPUTS[candidate] ?? []).includes(fact))
+      );
+      message = producers.length
+        ? `Se calculará usando: ${producers.map(item => TARGET_TITLES[item]).join(" → ")} → ${TARGET_TITLES[target]}.`
+        : "Seleccionada; se calculará con los datos ingresados.";
+      option.classList.add("selected-result");
+    } else if (directRoute) {
+      message = "Disponible con los datos ingresados.";
+      option.classList.add("available-direct");
+    } else if (selectedRoute) {
+      const producers = Object.keys(TARGET_OUTPUTS).filter(candidate =>
+        dependencyState.datosSeleccionados.has(candidate) &&
+        selectedRoute.some(fact => (TARGET_OUTPUTS[candidate] ?? []).includes(fact))
+      );
+      message = producers.length
+        ? `Disponible porque se calculará ${producers.map(item => TARGET_TITLES[item]).join(" y ")}.`
+        : "Disponible mediante otro resultado seleccionado.";
+      option.classList.add("available-via");
+    } else {
+      message = mensajeBloqueo(target, dependencyState);
+      option.classList.add("unavailable");
+    }
+    if (dependencyState.desactivados.includes(target)) option.classList.add("dependency-lost");
+    option.title = message;
+    reason.textContent = message;
   });
+
+  const circular = detectarDependenciasCirculares(dependencyState);
+  dom.solveButton.disabled =
+    dependencyState.datosSeleccionados.size === 0 ||
+    dependencyState.objetivosResueltos.size !== dependencyState.datosSeleccionados.size ||
+    circular;
+
+  if (announceLoss && dependencyState.desactivados.length) {
+    const names = dependencyState.desactivados.map(target => TARGET_TITLES[target]).join(", ");
+    showMessage(dom.resolverError, `${names} se desmarcó porque perdió un resultado intermedio necesario.`);
+  }
 }
 
 function procedure(title, data, formula, substitution, operation, result) {
@@ -515,18 +699,19 @@ function resolveTarget(target, raw, d) {
       };
     }
     case "maxHeight": {
-      const rise = d.vy0 > 0 ? d.vy0 * d.vy0 / (2 * d.g) : 0;
+      const upward = d.vy0 > 0;
+      const rise = upward ? d.vy0 * d.vy0 / (2 * d.g) : 0;
       const value = d.y0 + rise;
       return {
         procedure: procedure(
           TARGET_TITLES[target],
           dataLine(`y₀ = ${fmt(d.y0)} m`, `v₀y = ${fmt(d.vy0)} m/s`, `g = ${fmt(d.g)} m/s²`),
-          "vy² = v₀y² − 2g(y − y₀); en la altura máxima, vy = 0",
-          `0 = (${fmt(d.vy0)})² − 2(${fmt(d.g)})(y máx. − ${fmt(d.y0)})`,
-          "y máx. = y₀ + v₀y²/(2g)",
-          `y máx. = ${fmt(value)} m`
+          upward ? "vy² = v₀y² − 2g(y − y₀); en la altura máxima, vy = 0" : "Si v₀y ≤ 0, el proyectil desciende desde el lanzamiento.",
+          upward ? `0 = (${fmt(d.vy0)})² − 2(${fmt(d.g)})(Hmax − ${fmt(d.y0)})` : `v₀y = ${fmt(d.vy0)} m/s ≤ 0`,
+          upward ? "Hmax = y₀ + v₀y²/(2g)" : "Hmax = y₀",
+          `Hmax = ${fmt(value)} m respecto al suelo`
         ),
-        updates: { maxHeight: value }
+        updates: { maxHeight: value, hmax: value }
       };
     }
     case "flightTime": {
@@ -542,37 +727,54 @@ function resolveTarget(target, raw, d) {
           "Se resuelve la ecuación cuadrática y se toma el último tiempo físico.",
           `t total = ${fmt(value)} s`
         ),
-        updates: { flightTime: value }
+        updates: { flightTime: value, endTime: value }
       };
     }
     case "range": {
       const ending = endTimeInfo(d);
       if (ending.error) throw new Error("No se puede calcular el alcance porque no se ha definido dónde termina el movimiento.");
-      const value = d.vx0 * ending.time;
+      const rangeSigned = d.vx0 * ending.time;
+      const value = Math.abs(rangeSigned);
       return {
         procedure: procedure(
           TARGET_TITLES[target],
-          dataLine(`v₀x = ${fmt(d.vx0)} m/s`, `t = ${fmt(ending.time)} s`),
-          "R = v₀x t",
-          `R = (${fmt(d.vx0)})(${fmt(ending.time)})`,
-          "Se multiplica la velocidad horizontal constante por el tiempo total.",
-          `R = ${fmt(value)} m`
+          dataLine(`x₀ = ${fmt(d.x0)} m`, `v₀x = ${fmt(d.vx0)} m/s`, `t = ${fmt(ending.time)} s`),
+          "Rmax = |x impacto − x inicial| = |v₀x t|",
+          `Rmax = |(${fmt(d.vx0)})(${fmt(ending.time)})|`,
+          "Se toma la magnitud del desplazamiento horizontal desde el punto de lanzamiento.",
+          `Rmax = ${fmt(value)} m`
         ),
-        updates: { range: value, flightTime: ending.time }
+        updates: { range: value, rmax: value, rangeSigned, flightTime: ending.time, endTime: ending.time }
+      };
+    }
+    case "groundDistance": {
+      const rangeSigned = finite(d.rangeSigned) ? d.rangeSigned : 0;
+      const xImpact = d.x0 + rangeSigned;
+      const value = Math.abs(xImpact);
+      return {
+        procedure: procedure(
+          TARGET_TITLES[target],
+          dataLine(`x₀ = ${fmt(d.x0)} m`, `R con signo = ${fmt(rangeSigned)} m`, "x origen = 0 m"),
+          "x impacto = x₀ + R;  Dmax = |x impacto − x origen|",
+          `Dmax = |${fmt(d.x0)} + (${fmt(rangeSigned)}) − 0|`,
+          "Se mide la posición del impacto desde el origen horizontal del suelo.",
+          `Dmax = ${fmt(value)} m`
+        ),
+        updates: { groundDistance: value, dmax: value, xImpact }
       };
     }
     case "positionX": {
-      const value = d.vx0 * d.t;
+      const value = d.x0 + d.vx0 * d.t;
       return {
         procedure: procedure(
           TARGET_TITLES[target],
-          dataLine(`v₀x = ${fmt(d.vx0)} m/s`, `t = ${fmt(d.t)} s`),
-          "x = v₀x t",
-          `x = (${fmt(d.vx0)})(${fmt(d.t)})`,
+          dataLine(`x₀ = ${fmt(d.x0)} m`, `v₀x = ${fmt(d.vx0)} m/s`, `t = ${fmt(d.t)} s`),
+          "x = x₀ + v₀x t",
+          `x = ${fmt(d.x0)} + (${fmt(d.vx0)})(${fmt(d.t)})`,
           "Movimiento horizontal uniforme.",
           `x(${fmt(d.t)} s) = ${fmt(value)} m`
         ),
-        updates: { xAtTime: value }
+        updates: { xAtTime: value, positionX: value }
       };
     }
     case "positionY": {
@@ -598,7 +800,8 @@ function resolveTarget(target, raw, d) {
           `vx(${fmt(d.t)}) = ${fmt(d.vx0)}`,
           "La aceleración horizontal es cero.",
           `vx = ${fmt(d.vx0)} m/s`
-        )
+        ),
+        updates: { velocityX: d.vx0 }
       };
     }
     case "velocityY": {
@@ -612,7 +815,7 @@ function resolveTarget(target, raw, d) {
           "Se resta el cambio de velocidad producido por la gravedad.",
           `vy = ${fmt(value)} m/s`
         ),
-        updates: { vyAtTime: value }
+        updates: { vyAtTime: value, velocityY: value }
       };
     }
     case "speed": {
@@ -627,7 +830,7 @@ function resolveTarget(target, raw, d) {
           "Se calcula la magnitud del vector velocidad.",
           `|v| = ${fmt(value)} m/s`
         ),
-        updates: { speedAtTime: value }
+        updates: { speedAtTime: value, speed: value }
       };
     }
     case "impact":
@@ -684,7 +887,7 @@ function resolveTarget(target, raw, d) {
           `t = ${labels.join(";  t = ")}`
         ),
         variants,
-        updates: { heightTimes: solved.times }
+        updates: { heightTimes: solved.times, timeAtHeight: solved.times }
       };
     }
     case "heightAtX": {
@@ -806,10 +1009,13 @@ function combineScenarios(baseScenarios, variants, title) {
 
 function renderProcedureCard(item) {
   const article = document.createElement("article");
-  article.className = "procedure-card";
+  article.className = `procedure-card${item.role === "Resultado intermedio" ? " intermediate" : ""}`;
+  const role = document.createElement("span");
+  role.className = "procedure-role";
+  role.textContent = item.role ?? "Resultado solicitado";
   const heading = document.createElement("h4");
   heading.textContent = item.title;
-  article.appendChild(heading);
+  article.append(role, heading);
 
   [
     ["Datos", item.data],
@@ -828,6 +1034,43 @@ function renderProcedureCard(item) {
     article.appendChild(block);
   });
   return article;
+}
+
+function ordenarObjetivosSeleccionados(targets, dependencyState) {
+  const selected = new Set(targets);
+  const ordered = [];
+  const visited = new Set();
+  const visit = target => {
+    if (visited.has(target)) return;
+    visited.add(target);
+    const route = dependencyState.rutasSeleccionadas.get(target) ?? [];
+    route.forEach(fact => {
+      const producer = targets.find(candidate =>
+        selected.has(candidate) && (TARGET_OUTPUTS[candidate] ?? []).includes(fact)
+      );
+      if (producer && producer !== target) visit(producer);
+    });
+    ordered.push(target);
+  };
+  targets.forEach(visit);
+  return ordered;
+}
+
+function identificarResultadosIntermedios(targets, dependencyState) {
+  const selected = new Set(targets);
+  const intermediate = new Set();
+  targets.forEach(target => {
+    const route = dependencyState.rutasSeleccionadas.get(target) ?? [];
+    route.forEach(fact => {
+      const producer = targets.find(candidate =>
+        selected.has(candidate) &&
+        candidate !== target &&
+        (TARGET_OUTPUTS[candidate] ?? []).includes(fact)
+      );
+      if (producer) intermediate.add(producer);
+    });
+  });
+  return intermediate;
 }
 
 function renderSolution(solution) {
@@ -879,24 +1122,51 @@ function solveExercise(event) {
     showMessage(dom.resolverError, read.error);
     return;
   }
-  const selected = [...dom.calculationGrid.querySelectorAll('input[type="checkbox"]:checked')];
-  if (!selected.length) {
+  const dependencyState = resolverDisponibilidadRecursiva(read.data, read.derived);
+  const selectedIds = [...dependencyState.datosSeleccionados];
+  if (!selectedIds.length) {
     showMessage(dom.resolverError, "Selecciona al menos una cantidad para calcular.");
+    return;
+  }
+  if (dependencyState.objetivosResueltos.size !== dependencyState.datosSeleccionados.size) {
+    showMessage(dom.resolverError, "Una de las incógnitas seleccionadas perdió la ruta de cálculo que la habilitaba.");
+    updateOptionsAvailable(true);
+    return;
+  }
+  if (detectarDependenciasCirculares(dependencyState)) {
+    showMessage(dom.resolverError, "La selección contiene una dependencia circular y no puede resolverse.");
     return;
   }
 
   const procedures = [];
   const solved = { ...read.derived };
   let scenarios = [{ label: "", overrides: {} }];
+  const orderedTargets = ordenarObjetivosSeleccionados(selectedIds, dependencyState);
+  const intermediateTargets = identificarResultadosIntermedios(orderedTargets, dependencyState);
+  const needsImplicitComponents = orderedTargets.some(target => {
+    const route = dependencyState.rutasSeleccionadas.get(target) ?? [];
+    return target !== "components" &&
+      route.includes("v0") &&
+      route.includes("angle") &&
+      (!dependencyState.datosIngresados.has("vx0") || !dependencyState.datosIngresados.has("vy0"));
+  });
 
   try {
-    for (const checkbox of selected) {
-      const status = availability(checkbox.value, read.data, solved);
-      if (!status.ok) throw new Error(status.reason);
-      const result = resolveTarget(checkbox.value, read.data, solved);
+    if (needsImplicitComponents && !orderedTargets.includes("components")) {
+      const implicit = resolveTarget("components", read.data, solved);
+      implicit.procedure.role = "Resultado intermedio";
+      procedures.push(implicit.procedure);
+      Object.assign(solved, implicit.updates ?? {});
+    }
+
+    for (const target of orderedTargets) {
+      const physical = validarObjetivoFisico(target, read.data, solved);
+      if (!physical.ok) throw new Error(physical.reason);
+      const result = resolveTarget(target, read.data, solved);
+      result.procedure.role = intermediateTargets.has(target) ? "Resultado intermedio" : "Resultado solicitado";
       procedures.push(result.procedure);
       Object.assign(solved, result.updates ?? {});
-      scenarios = combineScenarios(scenarios, result.variants, TARGET_TITLES[checkbox.value]);
+      scenarios = combineScenarios(scenarios, result.variants, TARGET_TITLES[target]);
     }
   } catch (error) {
     showMessage(dom.resolverError, error.message);
@@ -907,7 +1177,8 @@ function solveExercise(event) {
     raw: read.data,
     solved,
     procedures,
-    scenarios
+    scenarios,
+    dependencyState
   };
   renderSolution(state.solution);
   dom.solutionSection.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
@@ -915,7 +1186,8 @@ function solveExercise(event) {
 
 function clearResolver() {
   dom.resolverForm.reset();
-  FIELD_DEFINITIONS.g.element.value = "9.8";
+  FIELD_DEFINITIONS.g.element.value = "9.81";
+  FIELD_DEFINITIONS.x0.element.value = "0";
   FIELD_DEFINITIONS.angle.element.dataset.automatic = "false";
   state.solution = null;
   dom.solutionSection.classList.add("hidden");
@@ -933,11 +1205,15 @@ function chosenScenario() {
 
 function calculateSimulation(parameters) {
   const { v0, angle, y0, g } = parameters;
-  if (![v0, angle, y0, g].every(finite)) {
-    return { error: "No fue posible completar v₀, θ, y₀ y g para la simulación." };
+  const x0 = finite(parameters.x0) ? parameters.x0 : 0;
+  if (![v0, angle, x0, y0, g].every(finite)) {
+    return { error: "No fue posible completar v₀, θ, x₀, y₀ y g para la simulación." };
   }
   if (v0 < 0 || g <= 0 || angle < -90 || angle > 90) {
     return { error: "Los datos calculados no forman una simulación física válida." };
+  }
+  if (y0 < 0 || (finite(parameters.finalHeight) && parameters.finalHeight < 0)) {
+    return { error: "Las alturas respecto al suelo deben ser mayores o iguales que cero." };
   }
 
   const vx0 = clean(v0 * Math.cos(radians(angle)));
@@ -963,7 +1239,10 @@ function calculateSimulation(parameters) {
   const maxHeight = vy0 > 0 && vy0 / g <= flightTime
     ? y0 + vy0 * vy0 / (2 * g)
     : Math.max(y0, finalHeight);
-  const range = vx0 * flightTime;
+  const rangeSigned = vx0 * flightTime;
+  const rmax = Math.abs(rangeSigned);
+  const xImpact = x0 + rangeSigned;
+  const dmax = Math.abs(xImpact);
   const impactVy = vy0 - g * flightTime;
   const impactSpeed = Math.hypot(vx0, impactVy);
   const impactAngle = degrees(Math.atan2(impactVy, vx0));
@@ -971,6 +1250,7 @@ function calculateSimulation(parameters) {
   return {
     v0,
     angle,
+    x0,
     y0,
     finalHeight,
     g,
@@ -979,7 +1259,11 @@ function calculateSimulation(parameters) {
     flightTime,
     ascentTime,
     maxHeight,
-    range,
+    range: rmax,
+    rmax,
+    rangeSigned,
+    xImpact,
+    dmax,
     impactVy,
     impactSpeed,
     impactAngle
@@ -1007,7 +1291,15 @@ function prepareResolvedSimulation() {
     ? scenario.overrides.flightTime
     : finite(data.t) ? data.t : finite(data.flightTime) ? data.flightTime : null;
 
-  const simulation = calculateSimulation({ v0, angle, y0: data.y0 ?? 0, g: data.g, finalHeight, flightTime });
+  const simulation = calculateSimulation({
+    v0,
+    angle,
+    x0: data.x0 ?? 0,
+    y0: data.y0 ?? 0,
+    g: data.g,
+    finalHeight,
+    flightTime
+  });
   if (simulation.error) {
     showMessage(dom.resolverError, simulation.error);
     dom.resolverError.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1022,6 +1314,7 @@ function prepareFreeSimulation(event) {
   const parameters = {
     v0: Number($("freeV0").value),
     angle: Number($("freeAngle").value),
+    x0: Number($("freeX0").value),
     y0: Number($("freeY0").value),
     finalHeight: Number($("freeY").value),
     g: Number($("freeG").value)
@@ -1038,7 +1331,7 @@ function pointAtTime(p, rawTime) {
   const t = Math.max(0, Math.min(rawTime, p.flightTime));
   return {
     t,
-    x: p.vx0 * t,
+    x: p.x0 + p.vx0 * t,
     y: p.y0 + p.vy0 * t - .5 * p.g * t * t,
     vx: p.vx0,
     vy: p.vy0 - p.g * t
@@ -1051,10 +1344,13 @@ function generatePath(p, count = 420) {
 }
 
 function trajectoryEquation(p) {
-  if (Math.abs(p.vx0) < EPS) return "Movimiento vertical: x = 0";
+  if (Math.abs(p.vx0) < EPS) return `Movimiento vertical: x = ${fmt(p.x0)} m`;
   const linear = p.vy0 / p.vx0;
   const quadratic = p.g / (2 * p.vx0 * p.vx0);
-  return `y(x) = ${fmt(p.y0)} ${linear < 0 ? "−" : "+"} ${fmt(Math.abs(linear), 3)}x − ${fmt(quadratic, 5)}x²`;
+  const shiftedX = Math.abs(p.x0) < EPS
+    ? "x"
+    : p.x0 > 0 ? `(x − ${fmt(p.x0)})` : `(x + ${fmt(Math.abs(p.x0))})`;
+  return `y(x) = ${fmt(p.y0)} ${linear < 0 ? "−" : "+"} ${fmt(Math.abs(linear), 3)}${shiftedX} − ${fmt(quadratic, 5)}${shiftedX}²`;
 }
 
 function prepareSimulation(simulation, source) {
@@ -1080,6 +1376,7 @@ function renderSimulationSummary(p) {
   const values = [
     ["v₀", `${fmt(p.v0)} m/s`],
     ["θ", `${fmt(p.angle)}°`],
+    ["x₀", `${fmt(p.x0)} m`],
     ["y₀ → y final", `${fmt(p.y0)} → ${fmt(p.finalHeight)} m`],
     ["g", `${fmt(p.g)} m/s²`],
     ["t total", `${fmt(p.flightTime)} s`]
@@ -1093,15 +1390,17 @@ function renderSimulationSummary(p) {
     row.append(dt, dd);
     return row;
   }));
-  dom.overlayRange.textContent = `${fmt(p.range)} m`;
-  dom.overlayHeight.textContent = `${fmt(p.maxHeight)} m`;
+  dom.overlayHmax.textContent = `${fmt(p.maxHeight)} m`;
+  dom.overlayRmax.textContent = `${fmt(p.rmax)} m`;
+  dom.overlayDmax.textContent = `${fmt(p.dmax)} m`;
   dom.overlayImpact.textContent = `${fmt(p.impactSpeed)} m/s`;
   dom.overlayTime.textContent = `${fmt(p.flightTime)} s`;
   dom.overlayEquation.textContent = trajectoryEquation(p);
   dom.resV0.textContent = fmt(p.v0);
   dom.resAngle.textContent = fmt(p.angle);
   dom.resTime.textContent = fmt(p.flightTime);
-  dom.resRange.textContent = fmt(p.range);
+  dom.resRange.textContent = fmt(p.rmax);
+  dom.resGroundDistance.textContent = fmt(p.dmax);
   dom.resMaxHeight.textContent = fmt(p.maxHeight);
   dom.resImpactSpeed.textContent = fmt(p.impactSpeed);
   updateTelemetry(pointAtTime(p, 0));
@@ -1318,7 +1617,7 @@ function drawLabel(text, x, y, tr, color = "#14261f") {
 
 function drawIndicators(p, tr) {
   if (p.vy0 > EPS && p.ascentTime <= p.flightTime + EPS) {
-    const apexX = p.vx0 * p.ascentTime;
+    const apexX = p.x0 + p.vx0 * p.ascentTime;
     ctx.save();
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = "rgba(196,146,59,.82)";
@@ -1330,8 +1629,8 @@ function drawIndicators(p, tr) {
     drawPoint(apexX, p.maxHeight, "#c4923b", tr);
     drawLabel(`y máx. = ${fmt(p.maxHeight)} m`, tr.x(apexX) + 8, tr.y(p.maxHeight) - 8, tr, "#76581c");
   }
-  drawPoint(p.range, p.finalHeight, "#a53a32", tr);
-  drawLabel("Punto final", tr.x(p.range) + (p.range < 0 ? -58 : 8), tr.y(p.finalHeight) + 24, tr, "#7e332d");
+  drawPoint(p.xImpact, p.finalHeight, "#a53a32", tr);
+  drawLabel("Punto final", tr.x(p.xImpact) + (p.rangeSigned < 0 ? -58 : 8), tr.y(p.finalHeight) + 24, tr, "#7e332d");
 }
 
 function drawVector(px, py, dx, dy, color, label) {
@@ -1519,13 +1818,14 @@ Object.values(FIELD_DEFINITIONS).forEach(definition => {
   });
 });
 
-dom.calculationGrid.addEventListener("change", invalidateSolution);
+dom.calculationGrid.addEventListener("change", () => {
+  invalidateSolution();
+  updateOptionsAvailable(true);
+});
 dom.calculationGrid.addEventListener("click", event => {
   const unavailable = event.target.closest(".calculation-option.unavailable");
   if (unavailable) {
     showMessage(dom.resolverError, unavailable.title);
-  } else {
-    hideMessage(dom.resolverError);
   }
 });
 

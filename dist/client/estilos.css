@@ -107,12 +107,17 @@ input[readonly] { background: #f1f2ee; color: var(--green); font-weight: 600; }
 .calculation-option > span { min-height: 90px; height: 100%; padding: 12px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 11px; background: white; transition: .18s ease; }
 .calculation-option strong { font-size: .78rem; line-height: 1.3; }
 .calculation-option small { margin-top: 3px; color: var(--muted); font: .67rem var(--mono); }
-.calculation-option em { margin-top: auto; padding-top: 7px; display: none; color: var(--danger); font-size: .63rem; font-style: normal; line-height: 1.35; }
+.calculation-option em { margin-top: auto; padding-top: 7px; display: block; color: var(--muted); font-size: .63rem; font-style: normal; line-height: 1.35; }
 .calculation-option > input:checked + span { border-color: var(--green-2); background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--green-2); }
 .calculation-option > input:focus-visible + span { outline: 3px solid var(--gold); outline-offset: 2px; }
+.calculation-option.available-direct em { color: var(--green-2); }
+.calculation-option.available-via > span { border-color: #d8bd7e; background: #fffaf0; }
+.calculation-option.available-via em { color: #76581c; }
+.calculation-option.selected-result em { color: var(--green); font-weight: 600; }
 .calculation-option.unavailable { cursor: help; }
 .calculation-option.unavailable > span { background: #f2f2ee; opacity: .72; }
-.calculation-option.unavailable em { display: block; }
+.calculation-option.unavailable em { color: var(--danger); }
+.calculation-option.dependency-lost > span { border-color: #e8bbb7; background: #faecea; }
 .calculation-option.context-hidden { display: none; }
 .resolver-actions { display: flex; gap: 9px; flex-wrap: wrap; }
 .message { margin: 12px 0; padding: 12px 14px; border-radius: 10px; font-size: .8rem; }
@@ -122,6 +127,9 @@ input[readonly] { background: #f1f2ee; color: var(--green); font-weight: 600; }
 .procedure-list { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .procedure-card { padding: 18px; border: 1px solid var(--line); border-radius: 13px; background: #fbfcf8; }
 .procedure-card h4 { margin: 0 0 12px; color: var(--green); font: 700 .9rem var(--display); }
+.procedure-role { width: fit-content; margin-bottom: 8px; padding: 4px 7px; display: block; border-radius: 999px; background: var(--soft); color: var(--green); font: 600 .6rem var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.procedure-card.intermediate { border-style: dashed; }
+.procedure-card.intermediate .procedure-role { background: #fbf0d8; color: #76581c; }
 .procedure-step { margin-top: 9px; }
 .procedure-step span { display: block; color: var(--muted); font: 600 .62rem var(--mono); text-transform: uppercase; letter-spacing: .08em; }
 .procedure-step code, .procedure-step p { margin: 3px 0 0; display: block; overflow-wrap: anywhere; color: var(--ink); font: 500 .78rem/1.5 var(--mono); white-space: normal; }
@@ -135,7 +143,7 @@ input[readonly] { background: #f1f2ee; color: var(--green); font-weight: 600; }
 .simulate-result { margin-bottom: 18px; }
 
 .free-card { padding: 24px; }
-.free-form { margin-top: 18px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.free-form { margin-top: 18px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: end; }
 .free-form label > span { float: right; font: .67rem var(--mono); }
 .free-form input { margin-top: 5px; }
 .simulation-section { margin-top: 30px; padding-top: 26px; border-top: 1px solid var(--line); scroll-margin-top: 80px; }
