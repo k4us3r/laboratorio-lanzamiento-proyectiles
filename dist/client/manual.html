@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manual sencillo para usar el resolutor y simulador de movimiento de proyectiles ProyectilLab.">
+  <title>Manual de uso · ProyectilLab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="skip-link" href="#manual">Ir al manual</a>
+
+  <header class="site-header">
+    <nav class="topnav" aria-label="Navegación principal">
+      <a class="brand" href="index.html#inicio" aria-label="ProyectilLab, inicio">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>Proyectil<span class="brand-accent">Lab</span></span>
+      </a>
+      <div class="nav-links manual-nav-links">
+        <a href="index.html#inicio">Inicio</a>
+        <a href="index.html#laboratorio">Laboratorio</a>
+        <a href="#manual" aria-current="page">Manual de uso</a>
+        <a href="index.html#acerca">Acerca</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="manual-page" id="manual">
+    <section class="manual-hero">
+      <p class="eyebrow">Guía rápida</p>
+      <h1>Manual de uso</h1>
+      <p>Aprende a ingresar los datos, agregar los incisos del ejercicio, resolverlos y reproducir la simulación.</p>
+      <a class="btn btn-primary" href="index.html#laboratorio">Ir al simulador</a>
+    </section>
+
+    <div class="manual-layout">
+      <aside class="card manual-index" aria-label="Contenido del manual">
+        <strong>Contenido</strong>
+        <a href="#para-que-sirve">¿Para qué sirve?</a>
+        <a href="#paso-1">1. Tipo de lanzamiento</a>
+        <a href="#paso-2">2. Datos iniciales</a>
+        <a href="#paso-3">3. Condición final</a>
+        <a href="#paso-4">4. Preguntas</a>
+        <a href="#paso-5">5. Resolver</a>
+        <a href="#paso-6">6. Simular</a>
+        <a href="#ejemplo">Ejemplo completo</a>
+        <a href="#mensajes">Mensajes frecuentes</a>
+      </aside>
+
+      <article class="manual-content">
+        <section class="card manual-section" id="para-que-sirve">
+          <span class="manual-step">Introducción</span>
+          <h2>¿Para qué sirve?</h2>
+          <p>ProyectilLab resuelve y simula ejercicios básicos de lanzamiento vertical, horizontal y parabólico. Permite calcular posiciones, velocidades, altura máxima, tiempo de vuelo, alcance e impacto.</p>
+          <p class="manual-note">Utiliza gravedad constante y no considera resistencia del aire ni viento.</p>
+        </section>
+
+        <section class="card manual-section" id="paso-1">
+          <span class="manual-step">Paso 1</span>
+          <h2>Seleccione el tipo de lanzamiento</h2>
+          <ul>
+            <li><strong>Vertical:</strong> el objeto solamente sube o baja.</li>
+            <li><strong>Horizontal:</strong> sale horizontalmente desde cierta altura.</li>
+            <li><strong>Parabólico:</strong> se lanza formando un ángulo.</li>
+          </ul>
+        </section>
+
+        <section class="card manual-section" id="paso-2">
+          <span class="manual-step">Paso 2</span>
+          <h2>Ingrese los datos iniciales</h2>
+          <p>Escriba solamente los valores proporcionados por el problema:</p>
+          <ul>
+            <li><strong>v₀:</strong> velocidad inicial.</li>
+            <li><strong>θ:</strong> ángulo de lanzamiento.</li>
+            <li><strong>x₀:</strong> posición horizontal inicial; normalmente es 0 m.</li>
+            <li><strong>y₀:</strong> altura desde la que comienza el movimiento.</li>
+            <li><strong>v₀x y v₀y:</strong> se usan si el problema proporciona directamente las componentes.</li>
+            <li><strong>g:</strong> normalmente 9.81 m/s².</li>
+          </ul>
+          <p>Los campos que el ejercicio no proporcione pueden quedar vacíos.</p>
+        </section>
+
+        <section class="card manual-section" id="paso-3">
+          <span class="manual-step">Paso 3</span>
+          <h2>Indique dónde termina el movimiento</h2>
+          <p>Seleccione suelo, una altura de impacto, la misma altura inicial, un tiempo final, una distancia horizontal o punto final no definido.</p>
+          <p class="manual-warning"><strong>Importante:</strong> “a los 3 segundos” es una consulta, no el tiempo final. Debe escribirse dentro de una pregunta.</p>
+        </section>
+
+        <section class="card manual-section" id="paso-4">
+          <span class="manual-step">Paso 4</span>
+          <h2>Agregue las preguntas</h2>
+          <p>Seleccione lo que pide cada inciso y presione <strong>Agregar pregunta</strong>. Algunas preguntas solicitarán su propio tiempo, altura, distancia o velocidad.</p>
+          <p>Puede repetir una consulta con valores diferentes, por ejemplo estado en 2 s y estado en 5 s.</p>
+        </section>
+
+        <section class="card manual-section" id="paso-5">
+          <span class="manual-step">Paso 5</span>
+          <h2>Resuelva el ejercicio</h2>
+          <p>Cuando los datos estén completos se habilitará <strong>Resolver ejercicio</strong>. Cada inciso mostrará datos, fórmula, sustitución, operación y resultado.</p>
+          <p>Si el proyectil pasa dos veces por una altura, se mostrarán el instante de subida y el de bajada.</p>
+        </section>
+
+        <section class="card manual-section" id="paso-6">
+          <span class="manual-step">Paso 6</span>
+          <h2>Use la simulación</h2>
+          <p>Presione <strong>Simular ejercicio</strong>. Puede iniciar, pausar, reanudar, reiniciar y cambiar la velocidad de reproducción.</p>
+          <p>En <strong>Eventos del ejercicio</strong> puede saltar directamente al lanzamiento, altura máxima, consultas e impacto.</p>
+        </section>
+
+        <section class="card manual-section manual-example" id="ejemplo">
+          <span class="manual-step">Ejemplo</span>
+          <h2>Lanzamiento desde un edificio</h2>
+          <p>Objeto lanzado verticalmente hacia arriba desde 60 m con v₀ = 20 m/s.</p>
+          <div class="manual-example-grid">
+            <div><strong>Datos iniciales</strong><span>Vertical · Hacia arriba</span><span>v₀ = 20 m/s</span><span>y₀ = 60 m</span><span>g = 9.81 m/s²</span></div>
+            <div><strong>Condición final</strong><span>Impacta en el suelo</span></div>
+            <div><strong>Preguntas</strong><span>Hmax</span><span>Estado en t = 3 s</span><span>Tiempo cuando y = 70 m</span><span>Tiempo de vuelo</span><span>Velocidad de impacto</span></div>
+          </div>
+          <p class="manual-note">Los 3 s y los 70 m se escriben dentro de sus preguntas; no cambian el impacto en el suelo.</p>
+        </section>
+
+        <section class="card manual-section" id="mensajes">
+          <span class="manual-step">Ayuda</span>
+          <h2>Mensajes frecuentes</h2>
+          <dl class="manual-messages">
+            <div><dt>Faltan datos iniciales</dt><dd>Revise v₀, θ o las componentes de velocidad.</dd></div>
+            <div><dt>Necesita una condición final</dt><dd>Defina el impacto para calcular tiempo total, Rmax, Dmax o velocidad de impacto.</dd></div>
+            <div><dt>No alcanza la altura</dt><dd>La altura supera Hmax o queda fuera del movimiento físico.</dd></div>
+            <div><dt>Ya impactó</dt><dd>El tiempo consultado ocurre después del final del movimiento.</dd></div>
+          </dl>
+        </section>
+
+        <a class="btn btn-primary manual-final-button" href="index.html#laboratorio">Comenzar un ejercicio</a>
+      </article>
+    </div>
+  </main>
+
+  <footer>
+    <strong>ProyectilLab</strong>
+    <p>UNICAH · Campus Jesús Sacramentado · Física I</p>
+  </footer>
+</body>
+</html>
