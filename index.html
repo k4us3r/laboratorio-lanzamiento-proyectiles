@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="estilos.css">
   <script src="script.js" defer></script>
+  <script src="resolver-v2.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#laboratorio">Ir al laboratorio</a>
@@ -68,8 +69,8 @@
             <div class="card-heading">
               <span class="step-number">01</span>
               <div>
-                <h3>Tipo de lanzamiento</h3>
-                <p>Selecciona el caso que describe el ejercicio.</p>
+                <h3>Datos iniciales del lanzamiento</h3>
+                <p>Primero selecciona el tipo de movimiento que describe el ejercicio.</p>
               </div>
             </div>
             <div class="launch-selector">
@@ -99,8 +100,8 @@
             <div class="card-heading">
               <span class="step-number">02</span>
               <div>
-                <h3>Datos conocidos</h3>
-                <p>Deja vacíos los valores que el ejercicio no proporciona.</p>
+                <h3>Estado inicial</h3>
+                <p>Ingresa solamente los valores que describen el instante de lanzamiento.</p>
               </div>
             </div>
 
@@ -145,7 +146,7 @@
                 </div>
               </div>
 
-              <div class="quantity-field" data-field="y" data-types="vertical horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="y" data-types="vertical horizontal parabolic">
                 <label for="knownY">Altura final o específica <span>y</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownY" min="0" step="any" inputmode="decimal" placeholder="Vacío">
@@ -156,7 +157,7 @@
                 <label class="field-check"><input type="checkbox" id="heightIsFinal"> Define el punto final o impacto</label>
               </div>
 
-              <div class="quantity-field" data-field="x" data-types="horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="x" data-types="horizontal parabolic">
                 <label for="knownX">Desplazamiento horizontal <span>x</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownX" step="any" inputmode="decimal" placeholder="Vacío">
@@ -167,7 +168,7 @@
                 <label class="field-check"><input type="checkbox" id="xIsRange"> Corresponde al alcance hasta el impacto</label>
               </div>
 
-              <div class="quantity-field" data-field="t" data-types="vertical horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="t" data-types="vertical horizontal parabolic">
                 <label for="knownT">Tiempo <span>t</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownT" min="0" step="any" inputmode="decimal" placeholder="Vacío">
@@ -198,7 +199,7 @@
                 </div>
               </div>
 
-              <div class="quantity-field" data-field="vx" data-types="horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="vx" data-types="horizontal parabolic">
                 <label for="knownVx">Velocidad horizontal final <span>vx</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownVx" step="any" inputmode="decimal" placeholder="Vacío">
@@ -208,7 +209,7 @@
                 </div>
               </div>
 
-              <div class="quantity-field" data-field="vy" data-types="vertical horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="vy" data-types="vertical horizontal parabolic">
                 <label for="knownVy">Velocidad vertical final <span>vy</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownVy" step="any" inputmode="decimal" placeholder="Vacío">
@@ -218,7 +219,7 @@
                 </div>
               </div>
 
-              <div class="quantity-field" data-field="vf" data-types="vertical horizontal parabolic">
+              <div class="quantity-field legacy-query-field" data-field="vf" data-types="vertical horizontal parabolic">
                 <label for="knownVf">Rapidez final <span>vf</span></label>
                 <div class="value-unit">
                   <input type="number" id="knownVf" min="0" step="any" inputmode="decimal" placeholder="Vacío">
@@ -237,18 +238,90 @@
               </div>
             </div>
 
-            <label class="check-control same-height-control">
+            <label class="check-control same-height-control legacy-query-field">
               <input type="checkbox" id="sameHeight">
               <span>El proyectil termina a la misma altura desde la que fue lanzado.</span>
             </label>
           </article>
 
-          <article class="card workflow-card">
+          <article class="card workflow-card" id="finalConditionCard">
             <div class="card-heading">
               <span class="step-number">03</span>
               <div>
-                <h3>¿Qué desea calcular?</h3>
-                <p>Las opciones se habilitan cuando los datos permiten una solución física válida.</p>
+                <h3>¿Dónde termina el movimiento?</h3>
+                <p>Esta condición solo define el impacto y la duración de la simulación.</p>
+              </div>
+            </div>
+            <div class="final-condition-layout">
+              <label class="select-field">
+                Condición final
+                <select id="finalCondition">
+                  <option value="ground">Impacta en el suelo · y final = 0</option>
+                  <option value="height">Impacta a una altura determinada</option>
+                  <option value="sameHeight">Termina a la misma altura de lanzamiento</option>
+                  <option value="time">Termina después de un tiempo determinado</option>
+                  <option value="horizontal">Impacta a una distancia horizontal determinada</option>
+                  <option value="none">No se ha definido el punto final</option>
+                </select>
+              </label>
+              <div class="conditional-final-field hidden" id="finalHeightField">
+                <label for="impactHeight">Altura de impacto <span>y<sub>final</sub></span></label>
+                <div class="value-unit">
+                  <input type="number" id="impactHeight" min="0" step="any" inputmode="decimal" placeholder="Altura">
+                  <select id="impactHeightUnit" aria-label="Unidad de altura de impacto">
+                    <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
+                  </select>
+                </div>
+              </div>
+              <div class="conditional-final-field hidden" id="finalTimeField">
+                <label for="impactTime">Tiempo final <span>t<sub>final</sub></span></label>
+                <div class="value-unit">
+                  <input type="number" id="impactTime" min="0" step="any" inputmode="decimal" placeholder="Tiempo">
+                  <select id="impactTimeUnit" aria-label="Unidad del tiempo final">
+                    <option value="s">s</option><option value="ms">ms</option><option value="min">min</option>
+                  </select>
+                </div>
+              </div>
+              <div class="conditional-final-field hidden" id="finalHorizontalField">
+                <label for="impactHorizontal">Dato horizontal de impacto</label>
+                <div class="value-unit">
+                  <input type="number" id="impactHorizontal" step="any" inputmode="decimal" placeholder="Distancia">
+                  <select id="impactHorizontalUnit" aria-label="Unidad horizontal de impacto">
+                    <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
+                  </select>
+                </div>
+                <label class="inline-choice"><input type="radio" name="impactHorizontalMode" value="displacement" checked> Desplazamiento desde el lanzamiento</label>
+                <label class="inline-choice"><input type="radio" name="impactHorizontalMode" value="coordinate"> Coordenada respecto al origen</label>
+              </div>
+              <p class="final-condition-note" id="finalConditionNote">El movimiento finalizará cuando el proyectil alcance el suelo.</p>
+            </div>
+          </article>
+
+          <article class="card workflow-card" id="questionsCard">
+            <div class="card-heading">
+              <span class="step-number">04</span>
+              <div>
+                <h3>Preguntas del ejercicio</h3>
+                <p>Agrega todos los incisos. Cada consulta guarda su propio tiempo, altura, distancia o velocidad.</p>
+              </div>
+            </div>
+            <div class="question-toolbar">
+              <label for="questionType">Nueva pregunta
+                <select id="questionType"></select>
+              </label>
+              <button class="btn btn-secondary" id="addQuestion" type="button">Agregar pregunta</button>
+              <button class="btn btn-ghost" id="addTimeQuestion" type="button">+ Agregar otro tiempo</button>
+            </div>
+            <div class="question-list" id="questionList" aria-live="polite"></div>
+            <p class="question-empty" id="questionEmpty">Todavía no hay preguntas. Agrega el primer inciso del ejercicio.</p>
+          </article>
+
+          <article class="card workflow-card legacy-resolver-options hidden">
+            <div class="card-heading">
+              <span class="step-number">Anterior</span>
+              <div>
+                <h3>Opciones anteriores</h3>
+                <p>Compatibilidad interna.</p>
               </div>
             </div>
             <div class="calculation-grid" id="calculationGrid">
@@ -282,7 +355,7 @@
         <section class="results-section hidden" id="solutionSection" aria-live="polite">
           <article class="card workflow-card">
             <div class="card-heading">
-              <span class="step-number">04</span>
+              <span class="step-number">05</span>
               <div>
                 <h3>Procedimiento y resultados</h3>
                 <p>Se conserva la precisión interna; los valores se presentan con decimales razonables.</p>
@@ -333,6 +406,11 @@
               <div><h3>Animación</h3><p>Los datos ya están configurados.</p></div>
             </div>
             <dl class="loaded-data" id="loadedData"></dl>
+            <div class="exercise-events hidden" id="exerciseEvents">
+              <label for="exerciseEventSelect">Eventos del ejercicio</label>
+              <select id="exerciseEventSelect"></select>
+              <p id="exerciseEventDescription"></p>
+            </div>
             <label class="check-control"><input type="checkbox" id="showVectors" checked><span>Mostrar vectores físicos</span></label>
             <label class="playback-control">Velocidad de reproducción
               <select id="playbackSpeed">
