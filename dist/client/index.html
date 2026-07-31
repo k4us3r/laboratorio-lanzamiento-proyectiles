@@ -138,7 +138,7 @@
               <div class="quantity-field" data-field="y0" data-types="vertical horizontal parabolic">
                 <label for="knownY0">Altura inicial <span>y₀</span></label>
                 <div class="value-unit">
-                  <input type="number" id="knownY0" min="0" step="any" inputmode="decimal" placeholder="Vacío">
+                  <input type="number" id="knownY0" value="0" min="0" step="any" inputmode="decimal">
                   <select id="unitY0" aria-label="Unidad de altura inicial">
                     <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
                   </select>
@@ -153,6 +153,7 @@
                     <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
                   </select>
                 </div>
+                <label class="field-check"><input type="checkbox" id="heightIsFinal"> Define el punto final o impacto</label>
               </div>
 
               <div class="quantity-field" data-field="x" data-types="horizontal parabolic">
@@ -163,6 +164,7 @@
                     <option value="m">m</option><option value="cm">cm</option><option value="mm">mm</option><option value="km">km</option>
                   </select>
                 </div>
+                <label class="field-check"><input type="checkbox" id="xIsRange"> Corresponde al alcance hasta el impacto</label>
               </div>
 
               <div class="quantity-field" data-field="t" data-types="vertical horizontal parabolic">
@@ -173,6 +175,7 @@
                     <option value="s">s</option><option value="ms">ms</option><option value="min">min</option>
                   </select>
                 </div>
+                <label class="field-check"><input type="checkbox" id="timeIsFinal"> Es el tiempo total o de impacto</label>
               </div>
 
               <div class="quantity-field" data-field="vx0" data-types="horizontal parabolic">

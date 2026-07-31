@@ -96,6 +96,8 @@ input[readonly] { background: #f1f2ee; color: var(--green); font-weight: 600; }
 .quantity-field > label span { color: var(--green); font: 600 .72rem var(--mono); }
 .value-unit { margin-top: 7px; display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 7px; }
 .field-hint { margin-top: 5px; display: block; color: var(--muted); font-size: .67rem; }
+.field-check { margin-top: 8px; display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: .66rem; font-weight: 500; line-height: 1.35; cursor: pointer; }
+.field-check input { width: 15px; min-height: 15px; margin: 1px 0 0; flex: none; accent-color: var(--green); }
 .check-control { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
 .check-control input { width: 18px; min-height: 18px; margin: 1px 0 0; flex: none; accent-color: var(--green); }
 .check-control span { color: var(--ink); }

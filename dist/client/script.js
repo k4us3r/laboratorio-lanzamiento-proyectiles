@@ -55,7 +55,7 @@ const DEPENDENCIAS = {
   components: [["v0", "angle"], ["vx0", "vy0"]],
   timeMax: [["vy0", "g"]],
   maxHeight: [["vy0", "y0", "g"]],
-  flightTime: [["y0", "y", "vy0", "g"], ["y0", "y", "v0", "angle", "g"]],
+  flightTime: [["y0", "finalHeight", "vy0", "g"], ["y0", "finalHeight", "v0", "angle", "g"]],
   range: [["vx0", "endTime"], ["v0", "angle", "endTime"]],
   groundDistance: [["x0", "rangeSigned"]],
   positionX: [["x0", "vx0", "t"], ["x0", "v0", "angle", "t"]],
@@ -63,7 +63,7 @@ const DEPENDENCIAS = {
   velocityX: [["vx0", "t"], ["v0", "angle", "t"]],
   velocityY: [["vy0", "t", "g"], ["v0", "angle", "t", "g"]],
   speed: [["vx0", "vy0", "t", "g"], ["v0", "angle", "t", "g"], ["velocityX", "velocityY"]],
-  impact: [["vx0", "vy0", "endTime", "g"], ["v0", "angle", "endTime", "g"]],
+  impact: [["impactVx", "impactVy"], ["vx0", "vy0", "endTime", "g"], ["v0", "angle", "endTime", "g"]],
   impactAngle: [["impactVx", "impactVy"]],
   timeAtHeight: [["y0", "y", "vy0", "g"], ["y0", "y", "v0", "angle", "g"]],
   heightAtX: [["x", "vx0", "y0", "vy0", "g"], ["x", "v0", "angle", "y0", "g"]],
@@ -97,6 +97,7 @@ const FACT_LABELS = {
   x0: "x₀",
   y0: "y₀",
   y: "altura final",
+  finalHeight: "altura final definida",
   x: "desplazamiento x",
   t: "tiempo t",
   vx0: "v₀x",
@@ -135,6 +136,9 @@ const dom = {
   verticalDirectionGroup: $("verticalDirectionGroup"),
   verticalDirection: $("verticalDirection"),
   sameHeight: $("sameHeight"),
+  heightIsFinal: $("heightIsFinal"),
+  xIsRange: $("xIsRange"),
+  timeIsFinal: $("timeIsFinal"),
   calculationGrid: $("calculationGrid"),
   resolverError: $("resolverError"),
   clearResolver: $("clearResolver"),
@@ -233,7 +237,10 @@ function readKnownData(strict = false) {
   const data = {
     launchType: selectedLaunchType(),
     verticalDirection: dom.verticalDirection.value,
-    sameHeight: dom.sameHeight.checked
+    sameHeight: dom.sameHeight.checked,
+    heightIsFinal: dom.heightIsFinal.checked || dom.sameHeight.checked,
+    xIsRange: dom.xIsRange.checked,
+    timeIsFinal: dom.timeIsFinal.checked
   };
 
   for (const [key, definition] of Object.entries(FIELD_DEFINITIONS)) {
@@ -290,8 +297,15 @@ function deriveData(raw) {
     if (!finite(d.vy0)) d.vy0 = expectedVy;
   }
 
-  if (!finite(d.vx0) && finite(d.x) && finite(d.t) && d.t > EPS) d.vx0 = d.x / d.t;
-  if (!finite(d.vy0) && finite(d.y0) && finite(d.y) && finite(d.t) && d.t > EPS && finite(d.g)) {
+  if (!finite(d.vx0) && finite(d.vx)) d.vx0 = d.vx;
+  if (!finite(d.vy0) && d.timeIsFinal && finite(d.vy) && finite(d.t) && finite(d.g)) {
+    d.vy0 = d.vy + d.g * d.t;
+  }
+  if (!finite(d.vx0) && d.xIsRange && d.timeIsFinal && finite(d.x) && finite(d.t) && d.t > EPS) {
+    d.vx0 = d.x / d.t;
+  }
+  if (!finite(d.vy0) && d.heightIsFinal && d.timeIsFinal &&
+      finite(d.y0) && finite(d.y) && finite(d.t) && d.t > EPS && finite(d.g)) {
     d.vy0 = (d.y - d.y0 + .5 * d.g * d.t * d.t) / d.t;
   }
 
@@ -308,6 +322,13 @@ function deriveData(raw) {
   }
   if (!finite(d.vf) && finite(d.vx) && finite(d.vy)) d.vf = Math.hypot(d.vx, d.vy);
   if (d.sameHeight && finite(d.y0)) d.y = d.y0;
+  if (d.xIsRange && finite(d.x)) {
+    d.rangeSigned = d.x;
+    d.rmax = Math.abs(d.x);
+  }
+  if (finite(d.vx)) d.impactVx = d.vx;
+  if (finite(d.vy)) d.impactVy = d.vy;
+  if (finite(d.vf)) d.impactSpeed = d.vf;
   return d;
 }
 
@@ -327,6 +348,9 @@ function validateCompatibility(raw, d) {
     if (finite(raw.vx0) && !near(raw.vx0, expectedVx)) {
       return "La velocidad inicial y el ángulo son incompatibles con v₀x.";
     }
+    if (finite(raw.vx) && !near(raw.vx, expectedVx)) {
+      return "La velocidad horizontal final es incompatible con v₀ y θ; sin resistencia del aire, vx permanece constante.";
+    }
     if (finite(raw.vy0) && !near(raw.vy0, expectedVy)) {
       return "La velocidad inicial y el ángulo son incompatibles con v₀y.";
     }
@@ -337,10 +361,17 @@ function validateCompatibility(raw, d) {
   if (finite(raw.vf) && finite(raw.vx) && finite(raw.vy) && !near(raw.vf, Math.hypot(raw.vx, raw.vy))) {
     return "La rapidez final no coincide con las componentes de la velocidad final.";
   }
-  if (finite(raw.t) && finite(raw.y0) && finite(raw.y) && finite(d.vy0) && finite(raw.g)) {
+  if (raw.timeIsFinal && raw.heightIsFinal &&
+      finite(raw.t) && finite(raw.y0) && finite(raw.y) && finite(d.vy0) && finite(raw.g)) {
     const expectedY = raw.y0 + d.vy0 * raw.t - .5 * raw.g * raw.t * raw.t;
     if (!near(raw.y, expectedY, 2e-4)) {
       return "La altura, el tiempo y la velocidad vertical ingresados son incompatibles entre sí.";
+    }
+  }
+  if (raw.timeIsFinal && raw.xIsRange && finite(raw.t) && finite(raw.x) && finite(d.vx0)) {
+    const expectedX = d.vx0 * raw.t;
+    if (!near(raw.x, expectedX, 2e-4)) {
+      return "El alcance, el tiempo total y la velocidad horizontal son incompatibles entre sí.";
     }
   }
   if (raw.sameHeight && finite(raw.y0) && finite(raw.y) && !near(raw.y0, raw.y)) {
@@ -365,7 +396,12 @@ function solveHeightTimes(y0, vy0, g, targetY) {
 }
 
 function endTimeInfo(d) {
-  if (finite(d.t)) return { time: d.t, times: [d.t], targetY: finite(d.y) ? d.y : null, source: "time" };
+  if (finite(d.endTime)) {
+    return { time: d.endTime, times: [d.endTime], targetY: finite(d.y) ? d.y : null, source: "calculated-time" };
+  }
+  if (d.timeIsFinal && finite(d.t)) {
+    return { time: d.t, times: [d.t], targetY: finite(d.y) ? d.y : null, source: "time" };
+  }
   if (finite(d.y0) && finite(d.y) && finite(d.vy0) && finite(d.g)) {
     const solved = solveHeightTimes(d.y0, d.vy0, d.g, d.y);
     if (solved.error) return solved;
@@ -380,8 +416,13 @@ function crearDatosIngresados(raw) {
     if (finite(raw[key])) datosIngresados.add(key);
   });
   if (raw.sameHeight) datosIngresados.add("sameHeight");
-  if (finite(raw.x)) datosIngresados.add("rangeInput");
-  if (finite(raw.t)) datosIngresados.add("endTime");
+  if (finite(raw.y) && (raw.heightIsFinal || raw.sameHeight)) datosIngresados.add("finalHeight");
+  if (finite(raw.x) && raw.xIsRange) {
+    datosIngresados.add("rangeInput");
+    datosIngresados.add("rangeSigned");
+    datosIngresados.add("rmax");
+  }
+  if (finite(raw.t) && raw.timeIsFinal) datosIngresados.add("endTime");
   if (raw.launchType === "horizontal") {
     datosIngresados.add("angle");
     datosIngresados.add("vy0");
@@ -390,6 +431,13 @@ function crearDatosIngresados(raw) {
     datosIngresados.add("angle");
     datosIngresados.add("vx0");
   }
+  if (finite(raw.vx)) {
+    datosIngresados.add("impactVx");
+    datosIngresados.add("vx0");
+  }
+  if (finite(raw.vy)) datosIngresados.add("impactVy");
+  if (finite(raw.vy) && raw.timeIsFinal && finite(raw.t) && finite(raw.g)) datosIngresados.add("vy0");
+  if (finite(raw.vf)) datosIngresados.add("impactSpeed");
   return datosIngresados;
 }
 
@@ -573,6 +621,15 @@ function updateSameHeight() {
   const yDefinition = FIELD_DEFINITIONS.y;
   yDefinition.element.disabled = dom.sameHeight.checked;
   yDefinition.unitElement.disabled = dom.sameHeight.checked;
+  if (dom.sameHeight.checked) {
+    if (!dom.heightIsFinal.checked) dom.heightIsFinal.dataset.automatic = "true";
+    dom.heightIsFinal.checked = true;
+    dom.heightIsFinal.disabled = true;
+  } else {
+    dom.heightIsFinal.disabled = false;
+    if (dom.heightIsFinal.dataset.automatic === "true") dom.heightIsFinal.checked = false;
+    dom.heightIsFinal.dataset.automatic = "false";
+  }
   if (dom.sameHeight.checked) {
     const rawY0 = y0Definition.element.value.trim();
     if (rawY0 === "") {
@@ -835,23 +892,34 @@ function resolveTarget(target, raw, d) {
     }
     case "impact":
     case "impactAngle": {
-      const ending = endTimeInfo(d);
-      if (ending.error) throw new Error("No se puede calcular el impacto porque no se ha definido el instante o punto final.");
-      const vx = d.vx0;
-      const vy = d.vy0 - d.g * ending.time;
+      const finalComponentsKnown = finite(d.impactVx) && finite(d.impactVy);
+      const ending = finalComponentsKnown ? null : endTimeInfo(d);
+      if (!finalComponentsKnown && ending.error) {
+        throw new Error("No se puede calcular el impacto porque no se ha definido el instante o punto final.");
+      }
+      const vx = finalComponentsKnown ? d.impactVx : d.vx0;
+      const vy = finalComponentsKnown ? d.impactVy : d.vy0 - d.g * ending.time;
       const speed = Math.hypot(vx, vy);
       const angle = degrees(Math.atan2(vy, vx));
       if (target === "impact") {
         return {
           procedure: procedure(
             TARGET_TITLES[target],
-            dataLine(`v₀x = ${fmt(vx)} m/s`, `v₀y = ${fmt(d.vy0)} m/s`, `g = ${fmt(d.g)} m/s²`, `t = ${fmt(ending.time)} s`),
-            "vx = v₀x;  vy = v₀y − gt;  |vf| = √(vx² + vy²)",
-            `vy = ${fmt(d.vy0)} − (${fmt(d.g)})(${fmt(ending.time)})`,
+            finalComponentsKnown
+              ? dataLine(`vx final = ${fmt(vx)} m/s`, `vy final = ${fmt(vy)} m/s`)
+              : dataLine(`v₀x = ${fmt(vx)} m/s`, `v₀y = ${fmt(d.vy0)} m/s`, `g = ${fmt(d.g)} m/s²`, `t = ${fmt(ending.time)} s`),
+            finalComponentsKnown ? "|vf| = √(vx² + vy²)" : "vx = v₀x;  vy = v₀y − gt;  |vf| = √(vx² + vy²)",
+            finalComponentsKnown ? `|vf| = √((${fmt(vx)})² + (${fmt(vy)})²)` : `vy = ${fmt(d.vy0)} − (${fmt(d.g)})(${fmt(ending.time)})`,
             `|vf| = √((${fmt(vx)})² + (${fmt(vy)})²)`,
             `vf = (${fmt(vx)}, ${fmt(vy)}) m/s;  |vf| = ${fmt(speed)} m/s`
           ),
-          updates: { impactVx: vx, impactVy: vy, impactSpeed: speed, impactAngle: angle, flightTime: ending.time }
+          updates: {
+            impactVx: vx,
+            impactVy: vy,
+            impactSpeed: speed,
+            impactAngle: angle,
+            ...(ending ? { flightTime: ending.time, endTime: ending.time } : {})
+          }
         };
       }
       return {
@@ -863,7 +931,7 @@ function resolveTarget(target, raw, d) {
           "Se conserva el cuadrante correcto con atan2.",
           `θf = ${fmt(angle)}°`
         ),
-        updates: { impactAngle: angle, flightTime: ending.time }
+        updates: { impactAngle: angle, ...(ending ? { flightTime: ending.time, endTime: ending.time } : {}) }
       };
     }
     case "timeAtHeight": {
@@ -1188,6 +1256,7 @@ function clearResolver() {
   dom.resolverForm.reset();
   FIELD_DEFINITIONS.g.element.value = "9.81";
   FIELD_DEFINITIONS.x0.element.value = "0";
+  FIELD_DEFINITIONS.y0.element.value = "0";
   FIELD_DEFINITIONS.angle.element.dataset.automatic = "false";
   state.solution = null;
   dom.solutionSection.classList.add("hidden");
@@ -1289,7 +1358,9 @@ function prepareResolvedSimulation() {
     : finite(data.y) ? data.y : data.sameHeight ? data.y0 : null;
   const flightTime = finite(scenario.overrides.flightTime)
     ? scenario.overrides.flightTime
-    : finite(data.t) ? data.t : finite(data.flightTime) ? data.flightTime : null;
+    : finite(data.endTime) ? data.endTime
+      : finite(data.flightTime) ? data.flightTime
+        : finite(data.t) ? data.t : null;
 
   const simulation = calculateSimulation({
     v0,
@@ -1803,6 +1874,13 @@ dom.sameHeight.addEventListener("change", () => {
   invalidateSolution();
   updateSameHeight();
   updateOptionsAvailable();
+});
+
+[dom.heightIsFinal, dom.xIsRange, dom.timeIsFinal].forEach(control => {
+  control.addEventListener("change", () => {
+    invalidateSolution();
+    updateOptionsAvailable(true);
+  });
 });
 
 Object.values(FIELD_DEFINITIONS).forEach(definition => {
